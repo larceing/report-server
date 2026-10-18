@@ -111,6 +111,9 @@ texto (`2026-10-12`), listas para `comoFecha`.
 
 ## Llevarlas a otro sitio
 
+Una app puede enlazar directamente a una plantilla: `<dirección del Report Server>/#editar=<nombre>`
+abre el diseñador con ella (si ya hay sesión).
+
 **Descargar** da una plantilla (diseño, grupo, consultas y datos de ejemplo) en un `.json`; **Descargar
 todas** da todas en `informes.json`, para guardarlas en una carpeta o pasarlas de DEV a PRO.
 **Importar .json** acepta los dos. Las conexiones no viajan (llevan contraseña): en el otro entorno hay
