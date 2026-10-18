@@ -33,6 +33,7 @@ app.use('/marca', express.static(path.join(PUBLICO, 'marca'), { redirect: false,
 
 // Las plantillas (con sus imágenes) llegan desde la pantalla; los datos de un documento, hasta 2 MB.
 app.use(['/api/admin/plantillas', '/api/admin/probar'], express.json({ limit: '14mb' }));
+app.post('/api/plantillas', express.json({ limit: '14mb' }));
 app.use('/api/admin/importar', express.json({ limit: '60mb' }));
 app.use(express.json({ limit: '2mb' }));
 app.use('/api', (req, res, next) => {
@@ -61,6 +62,25 @@ app.get('/api/plantillas', (req, res, next) => {
     res.json(plantillas.lista().filter(p => p.formatos.length && (!grupo || p.grupo === grupo)).map(p => ({
       nombre: p.nombre, titulo: p.titulo, grupo: p.grupo, formatos: p.formatos, parametros: p.origen.parametros.map(x => x.nombre)
     })));
+  } catch (e) { next(e); }
+});
+
+// Una app instala sus plantillas de partida (las que empiezan por su nombre: sindri-factura…).
+// Si ya existe, no la toca salvo con «sustituir»: lo retocado en el diseñador se queda. Sin consultas
+// a bases de datos: eso solo se pone desde la pantalla.
+app.post('/api/plantillas', async (req, res, next) => {
+  try {
+    const appQueLlama = llaves.appDe(req);
+    const b = req.body || {};
+    const nombre = String(b.nombre || '').trim();
+    if (!nombre.startsWith(appQueLlama + '-')) {
+      throw llaves.error('Con su llave, una app solo instala plantillas que empiezan por su nombre (' + appQueLlama + '-…).', 403);
+    }
+    const anterior = plantillas.una(nombre);
+    if (anterior && !b.sustituir) return res.json({ nombre, estado: 'ya estaba' });
+    if (b.plantilla === undefined) throw llaves.error('Falta la plantilla.');
+    await plantillas.guardar({ nombre, titulo: b.titulo, grupo: b.grupo, plantilla: b.plantilla, ejemplo: b.ejemplo });
+    res.json({ nombre, estado: anterior ? 'sustituida' : 'instalada' });
   } catch (e) { next(e); }
 });
 

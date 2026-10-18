@@ -79,6 +79,30 @@ process.env.RS_DATOS = fs.mkdtempSync(path.join(os.tmpdir(), 'rs-'));
   r = await pedir('GET', '/api/plantillas', null, conLlave);
   assert.deepStrictEqual(r.json, [{ nombre: 'resumen', titulo: 'Resumen de servicios', grupo: '', formatos: ['pdf'], parametros: [] }]);
 
+  // Una app instala sus plantillas de partida con su llave, sin pisar lo retocado.
+  const propia = { nombre: 'soporte-parte', titulo: 'Parte', grupo: 'parte', plantilla: diseno, ejemplo };
+  r = await pedir('POST', '/api/plantillas', propia);
+  assert.strictEqual(r.status, 401, 'instalar sin llave');
+  r = await pedir('POST', '/api/plantillas', { ...propia, nombre: 'resumen', sustituir: true }, conLlave);
+  assert.strictEqual(r.status, 403, 'solo las que empiezan por su nombre');
+  r = await pedir('POST', '/api/plantillas', { ...propia, nombre: 'soportes-x' }, conLlave);
+  assert.strictEqual(r.status, 403, 'el nombre de la app entero, con guion');
+  r = await pedir('POST', '/api/plantillas', { ...propia, plantilla: { schemas: 'no' } }, conLlave);
+  assert.strictEqual(r.status, 400, 'plantilla no válida');
+  r = await pedir('POST', '/api/plantillas', { ...propia, origen: { conexion: 'x', consultas: [{ nombre: 'a', sql: 'select 1' }] } }, conLlave);
+  assert.deepStrictEqual(r.json, { nombre: 'soporte-parte', estado: 'instalada' }, JSON.stringify(r.json));
+  r = await pedir('GET', '/api/admin/plantillas/soporte-parte/fichero');
+  assert.strictEqual(r.json.grupo, 'parte');
+  assert.strictEqual(r.json.origen.conexion, '', 'la app no pone consultas');
+  await pedir('PUT', '/api/admin/plantillas/soporte-parte', { titulo: 'Parte retocado' });
+  r = await pedir('POST', '/api/plantillas', propia, conLlave);
+  assert.deepStrictEqual(r.json, { nombre: 'soporte-parte', estado: 'ya estaba' });
+  assert.strictEqual((await pedir('GET', '/api/admin/plantillas/soporte-parte/fichero')).json.titulo, 'Parte retocado');
+  r = await pedir('POST', '/api/plantillas', { ...propia, sustituir: true }, conLlave);
+  assert.deepStrictEqual(r.json, { nombre: 'soporte-parte', estado: 'sustituida' });
+  assert.strictEqual((await pedir('GET', '/api/admin/plantillas/soporte-parte/fichero')).json.titulo, 'Parte');
+  await pedir('DELETE', '/api/admin/plantillas/soporte-parte');
+
   assert.strictEqual((await pedir('POST', '/api/generar', { plantilla: 'no-existe' }, conLlave)).status, 404);
   assert.strictEqual((await pedir('POST', '/api/generar', { plantilla: 'resumen', formato: 'docx' }, conLlave)).status, 400);
   assert.strictEqual((await pedir('POST', '/api/generar', { plantilla: 'resumen', datos: 'texto' }, conLlave)).status, 400);
