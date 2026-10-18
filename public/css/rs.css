@@ -79,3 +79,10 @@ input.titulo { max-width: 320px; }
 .boton-fichero { display: inline-block; font-weight: 400; font-size: 15px; margin: 0; padding: 8px 14px; border: 1px solid var(--linea); border-radius: 8px; background: #fff; cursor: pointer; }
 .boton-fichero input { display: none; }
 main.ancho { max-width: none; }
+/* Diseñador a pantalla completa: solo la barra de botones y el lienzo. */
+#editor.completa { position: fixed; inset: 0; z-index: 50; background: var(--bg); padding: 8px; }
+#editor.completa > .panel:first-child { height: 100%; margin: 0; display: flex; flex-direction: column; padding: 10px 12px; }
+#editor.completa > .panel:first-child > .fila { margin-bottom: 8px; }
+#editor.completa .lienzo { flex: 1; height: auto; min-height: 0; }
+#editor.completa .dos { display: none; }
+body.sin-scroll { overflow: hidden; }
