@@ -121,13 +121,14 @@ async function abrir(p) {
   marcarCambios(false);
   document.querySelectorAll('.tarjeta').forEach(t => t.classList.toggle('activa', t.dataset.nombre === p.nombre));
   $('editor').classList.remove('hidden');
+  document.querySelector('main').classList.add('ancho');
   $('eNombre').textContent = p.nombre;
   $('eTitulo').value = p.titulo;
   $('eEjemplo').value = JSON.stringify(p.ejemplo, null, 2);
   limpiarResultado();
   const nueva = p.formatos.length > 0;
   $('eAntigua').classList.toggle('hidden', nueva);
-  ['eGuardar', 'eVer', 'eCopiar', 'eDescargar'].forEach(id => { $(id).disabled = !nueva; });
+  ['eGuardar', 'eCompleta', 'eVer', 'eCopiar', 'eDescargar'].forEach(id => { $(id).disabled = !nueva; });
   if (disenador) { disenador.destroy(); disenador = null; }
   $('lienzo').replaceChildren();
   if (!nueva) return;
@@ -147,11 +148,26 @@ async function abrir(p) {
   }
 }
 
+// Pantalla completa: el diseñador ocupa toda la ventana; la vista previa se abre en otra pestaña.
+function pantallaCompleta(si) {
+  $('editor').classList.toggle('completa', si);
+  document.body.classList.toggle('sin-scroll', si);
+  $('eCompleta').textContent = si ? 'Salir de pantalla completa' : 'Pantalla completa';
+  // El diseñador se recoloca con el nuevo tamaño.
+  window.dispatchEvent(new Event('resize'));
+}
+const enCompleta = () => $('editor').classList.contains('completa');
+
+$('eCompleta').addEventListener('click', () => pantallaCompleta(!enCompleta()));
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && enCompleta()) pantallaCompleta(false); });
+
 function cerrar() {
+  pantallaCompleta(false);
   actual = null;
   marcarCambios(false);
   if (disenador) { disenador.destroy(); disenador = null; }
   $('editor').classList.add('hidden');
+  document.querySelector('main').classList.remove('ancho');
 }
 
 function limpiarResultado() {
@@ -267,6 +283,7 @@ $('eVer').addEventListener('click', async () => {
     $('rInfo').textContent = 'PDF · ' + tamano(blob.size) + ' · ' + ((Date.now() - inicio) / 1000).toFixed(1) + ' s';
     $('rVista').src = urlResultado;
     $('rVista').classList.remove('hidden');
+    if (enCompleta()) window.open(urlResultado, '_blank');
   } catch (e) {
     $('rInfo').classList.add('hidden');
     $('rError').textContent = e.message;
