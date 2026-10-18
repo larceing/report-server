@@ -2,3 +2,5 @@ node_modules/
 datos/
 .env
 app.env
+public/js/disenador.js
+public/js/pdfium.esm.wasm

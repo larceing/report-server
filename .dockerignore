@@ -2,3 +2,5 @@ node_modules
 datos
 tests
 .git
+public/js/disenador.js
+public/js/pdfium.esm.wasm

@@ -27,38 +27,45 @@
       <div id="listaPlantillas" class="lista-plantillas"></div>
 
       <div class="panel">
-        <strong>Subir una plantilla</strong>
-        <p class="suave">Un documento de Word (.docx), LibreOffice (.odt) o Excel (.xlsx, .ods) con marcas como <code>{d.cliente}</code>. Con un nombre que ya existe, la sustituye y conserva sus datos de ejemplo.</p>
+        <strong>Nueva plantilla</strong>
+        <p class="suave">Se crea en blanco (A4) y se diseña aquí mismo. También se puede importar una descargada de otro entorno (.json); con un nombre que ya existe, la sustituye.</p>
         <div class="fila">
-          <input id="sNombre" placeholder="nombre (resumen, parte-de-horas…)">
-          <input id="sTitulo" placeholder="Título (opcional)">
-          <input type="file" id="sFichero" accept=".docx,.odt,.xlsx,.ods">
-          <button id="subir" class="primario">Subir</button>
+          <input id="nNombre" placeholder="nombre (resumen, parte-de-horas…)">
+          <input id="nTitulo" placeholder="Título (opcional)">
+          <button id="crear" class="primario">Crear en blanco</button>
+          <label class="boton-fichero">Importar .json<input type="file" id="nFichero" accept=".json,application/json"></label>
         </div>
       </div>
 
-      <div id="editor" class="dos hidden">
+      <div id="editor" class="hidden">
         <div class="panel">
-          <div class="fila"><strong id="eNombre"></strong><span class="hueco"></span>
-            <button id="eDescargar">Descargar plantilla</button>
+          <div class="fila">
+            <strong id="eNombre"></strong>
+            <input id="eTitulo" class="titulo" placeholder="Título">
+            <span id="eCambios" class="cambios hidden">Sin guardar</span>
+            <span class="hueco"></span>
+            <button id="eGuardar" class="primario">Guardar</button>
+            <button id="eVer">Vista previa</button>
+            <button id="eCopiar">Copiar la llamada</button>
+            <button id="eDescargar">Descargar</button>
             <button id="eBorrar" class="peligro">Borrar</button>
           </div>
-          <label>Título<input id="eTitulo"></label>
-          <label>Datos de ejemplo (JSON): lo que mandaría una app en <code>datos</code>
-            <textarea id="eEjemplo" class="json" spellcheck="false"></textarea></label>
-          <div class="fila">
-            <select id="eFormato"></select>
-            <button id="eGenerar" class="primario">Generar</button>
-            <button id="eGuardar">Guardar título y ejemplo</button>
-            <button id="eCopiar">Copiar la llamada</button>
-          </div>
-          <p class="suave">«Copiar la llamada» da lo que otra app tiene que mandar a <code>/api/generar</code> para este documento.</p>
+          <p id="eAntigua" class="aviso-barra hidden">Esta plantilla es de la versión anterior (Word) y ya no sale. Créala de nuevo con el diseñador y borra esta.</p>
+          <p id="eCargando" class="suave hidden">Cargando el diseñador…</p>
+          <div id="lienzo" class="lienzo"></div>
         </div>
-        <div class="panel">
-          <div class="fila"><strong>Resultado</strong><span class="hueco"></span><a id="rDescargar" class="hidden" download>Descargar</a></div>
-          <p id="rError" class="error hidden"></p>
-          <p id="rInfo" class="suave">Pulsa «Generar» para verlo con los datos de ejemplo.</p>
-          <iframe id="rVista" title="Documento generado" class="hidden"></iframe>
+        <div class="dos">
+          <div class="panel">
+            <label>Datos de ejemplo (JSON): lo que mandaría una app en <code>datos</code>
+              <textarea id="eEjemplo" class="json" spellcheck="false"></textarea></label>
+            <p class="suave">Se guardan con «Guardar». La vista previa usa el diseño de arriba, aunque no esté guardado.</p>
+          </div>
+          <div class="panel">
+            <div class="fila"><strong>Vista previa</strong><span class="hueco"></span><a id="rDescargar" class="hidden" download>Descargar PDF</a></div>
+            <p id="rError" class="error hidden"></p>
+            <p id="rInfo" class="suave">Pulsa «Vista previa» para verla con los datos de ejemplo.</p>
+            <iframe id="rVista" title="Vista previa" class="hidden"></iframe>
+          </div>
         </div>
       </div>
     </section>
@@ -88,23 +95,31 @@
 
     <section id="p-ayuda" class="hidden">
       <div class="panel ayuda">
-        <p>Una plantilla es un documento normal de Word, LibreOffice o Excel: le das el diseño que quieras (logo, colores, tablas) y escribes marcas donde van los datos. Report Server las rellena con lo que manda la app y saca el PDF.</p>
-        <h3>Marcas</h3>
+        <p>Una plantilla se diseña en la pestaña Plantillas: a la izquierda están los elementos (texto, tabla, imagen, línea, rectángulo, QR…), se arrastran a la página y a la derecha se cambian su tamaño, letra y colores. Con «Vista previa» se ve el PDF con los datos de ejemplo. Report Server la rellena con lo que manda la app.</p>
+        <h3>Dónde van los datos</h3>
         <table class="tabla">
           <tbody>
-            <tr><td><code>{d.cliente.nombre}</code></td><td>Un dato. <code>d</code> son los datos que manda la app.</td></tr>
-            <tr><td><code>{d.lineas[i].concepto}</code><br><code>{d.lineas[i+1].concepto}</code></td><td>Una lista: en una fila de tabla la primera marca y en la fila de debajo la misma con <code>i+1</code>. Se repite la fila por cada elemento.</td></tr>
-            <tr><td><code>{d.total:formatC(2)}</code></td><td>Moneda: 1.234,50 €</td></tr>
-            <tr><td><code>{d.horas:formatN(2)}</code></td><td>Número con decimales: 6,75</td></tr>
-            <tr><td><code>{d.fecha:formatD('DD/MM/YYYY')}</code></td><td>Fecha (la app la manda como 2026-10-12)</td></tr>
-            <tr><td><code>{d.notas:ifEmpty('Sin notas')}</code></td><td>Texto si viene vacío</td></tr>
-            <tr><td><code>{d.lineas:len()}</code></td><td>Cuántos elementos tiene una lista</td></tr>
+            <tr><td>Texto</td><td>Escribe el texto con marcas entre llaves: <code>Cliente: {cliente.nombre}</code>. Una marca es el nombre de un dato de los que manda la app; con un punto se entra en un objeto.</td></tr>
+            <tr><td>Tabla</td><td>Ponle de nombre el de la lista de los datos (<code>lineas</code>). En la primera fila escribe la marca de cada columna (<code>{concepto}</code>, <code>{enEuros(importe)}</code>): se repite por cada elemento. Si no cabe, sigue en otra página.</td></tr>
+            <tr><td>Imagen, QR…</td><td>Fija (un logo): súbela en el elemento. Que la mande la app: marca «Editable» y ponle de nombre el del dato (una imagen en <code>data:image/png;base64,…</code>, el texto del QR…).</td></tr>
           </tbody>
         </table>
-        <p class="suave">Todas las marcas en <a href="https://carbone.io/documentation.html" target="_blank" rel="noopener">la documentación de Carbone</a>. Consejo: escribe cada marca de una vez, sin corregirla a medias, para que Word no la parta por dentro.</p>
+        <h3>Formato en español</h3>
+        <table class="tabla">
+          <tbody>
+            <tr><td><code>{enEuros(total)}</code></td><td>1.234,50 €</td></tr>
+            <tr><td><code>{conDecimales(horas)}</code> · <code>{conDecimales(horas, 1)}</code></td><td>6,75 · 6,8</td></tr>
+            <tr><td><code>{comoFecha(fecha)}</code></td><td>12/10/2026 (la app la manda como 2026-10-12)</td></tr>
+            <tr><td><code>{comoFecha(fecha, 'larga')}</code> · <code>{comoFecha(creada, 'hora')}</code></td><td>12 de octubre de 2026 · 12/10/2026, 18:30</td></tr>
+            <tr><td><code>{siVacio(notas, 'Sin notas')}</code></td><td>Otro texto si el dato viene vacío</td></tr>
+            <tr><td><code>{hoy()}</code></td><td>La fecha del día</td></tr>
+            <tr><td><code>{lineas.length}</code> · <code>{horas * 40}</code> · <code>{pagado ? 'Pagado' : 'Pendiente'}</code></td><td>También valen cuentas y condiciones sencillas</td></tr>
+          </tbody>
+        </table>
+        <p class="suave">Si una marca no se puede resolver (un dato que no viene), sale tal cual, entre llaves: así se ve en la vista previa.</p>
         <h3>Desde otra app</h3>
         <pre id="ejemploLlamada"></pre>
-        <p>Responde con el fichero. Si algo falla, con un JSON <code>{"error": "…"}</code>. <code>GET /api/plantillas</code> (con la llave) lista las plantillas y sus formatos.</p>
+        <p>Responde con el PDF. Si algo falla, con un JSON <code>{"error": "…"}</code>. <code>GET /api/plantillas</code> (con la llave) lista las plantillas.</p>
       </div>
     </section>
   </main>
