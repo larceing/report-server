@@ -1,0 +1,14 @@
+{
+  "documento": "RS-2026-0014",
+  "fecha": "2026-10-12",
+  "cliente": { "nombre": "Multiforte SL", "nif": "B00000000", "direccion": "C/ Ejemplo 1, Madrid" },
+  "periodo": { "desde": "2026-08-19", "hasta": "2026-10-12" },
+  "lineas": [
+    { "dia": "2026-08-21", "concepto": "Revisión de facturas duplicadas", "horas": 1.5, "importe": 60 },
+    { "dia": "2026-09-03", "concepto": "Informe mensual de ventas", "horas": 3, "importe": 120 },
+    { "dia": "2026-10-10", "concepto": "Soporte a usuarios", "horas": 2.25, "importe": 90 }
+  ],
+  "horas": 6.75,
+  "total": 270,
+  "notas": "Importes sin IVA."
+}
