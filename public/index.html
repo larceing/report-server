@@ -12,6 +12,7 @@
     <nav id="pestanas">
       <button data-p="plantillas" class="activa">Plantillas</button>
       <button data-p="registro">Registro</button>
+      <button data-p="conexiones">Conexiones</button>
       <button data-p="llaves">Llaves</button>
       <button data-p="ayuda">Cómo se hace una plantilla</button>
     </nav>
@@ -34,6 +35,7 @@
           <input id="nTitulo" placeholder="Título (opcional)">
           <button id="crear" class="primario">Crear en blanco</button>
           <label class="boton-fichero">Importar .json<input type="file" id="nFichero" accept=".json,application/json"></label>
+          <button id="descargarTodas" title="Todas las plantillas en un fichero, para guardarlas en una carpeta o pasarlas a otro entorno">Descargar todas</button>
         </div>
       </div>
 
@@ -55,9 +57,31 @@
           <p id="eCargando" class="suave hidden">Cargando el diseñador…</p>
           <div id="lienzo" class="lienzo"></div>
         </div>
+        <div id="eDatos" class="panel">
+          <div class="fila">
+            <strong>De dónde salen los datos</strong>
+            <span class="hueco"></span>
+            <button id="eProbarConsultas">Probar consultas</button>
+          </div>
+          <div class="fila">
+            <label class="corta">Grupo <input id="eGrupo" list="grupos" placeholder="pedido, factura… (opcional)"></label>
+            <datalist id="grupos"></datalist>
+            <label class="corta">Base de datos <select id="eConexion"></select></label>
+          </div>
+          <div id="eConDatos">
+            <div class="bloque-cab">Parámetros <span class="suave">(lo que manda la app: el id del pedido…), con un valor para probar</span></div>
+            <div id="eParametros"></div>
+            <div class="anadir"><button id="eMasParametro">Añadir parámetro</button></div>
+            <div class="bloque-cab">Consultas <span class="suave">(solo SELECT; los parámetros van como <code>:id</code>)</span></div>
+            <div id="eConsultas"></div>
+            <div class="anadir"><button id="eMasConsulta">Añadir consulta</button></div>
+            <p id="eConsultaError" class="error hidden"></p>
+            <pre id="eResultado" class="hidden"></pre>
+          </div>
+        </div>
         <div class="dos">
           <div class="panel">
-            <label>Datos de ejemplo (JSON): lo que mandaría una app en <code>datos</code>
+            <label>Datos de ejemplo (JSON): lo que mandaría una app en <code>datos</code> (con base de datos, se suman a lo que salga de las consultas)
               <textarea id="eEjemplo" class="json" spellcheck="false"></textarea></label>
             <p class="suave">Se guardan con «Guardar». La vista previa usa el diseño de arriba, aunque no esté guardado.</p>
           </div>
@@ -76,6 +100,28 @@
       <table class="tabla">
         <thead><tr><th>Cuándo</th><th>App</th><th>Plantilla</th><th>Formato</th><th>Tamaño</th><th>Tiempo</th><th>Estado</th></tr></thead>
         <tbody id="listaRegistro"></tbody>
+      </table>
+    </section>
+
+    <section id="p-conexiones" class="hidden">
+      <div class="panel">
+        <p>Las bases de datos de las que leen los informes (MariaDB o MySQL). La contraseña se guarda cifrada y no se vuelve a mostrar. Mejor un usuario que solo pueda leer; aun así, Report Server solo deja lanzar consultas SELECT.</p>
+        <div class="fila">
+          <input id="cNombre" placeholder="nombre (erp, soporte…)">
+          <input id="cHost" placeholder="servidor (incidencias-db, 10.0.0.5…)">
+          <input id="cPuerto" placeholder="puerto" value="3306" class="estrecho">
+        </div>
+        <div class="fila">
+          <input id="cUsuario" placeholder="usuario">
+          <input id="cClave" type="password" placeholder="contraseña" autocomplete="new-password">
+          <input id="cBase" placeholder="base de datos">
+          <button id="cGuardar" class="primario">Guardar</button>
+        </div>
+        <p class="suave">Para cambiar una, pulsa en ella: sin escribir la contraseña, se queda la que tenía.</p>
+      </div>
+      <table class="tabla">
+        <thead><tr><th>Nombre</th><th>Servidor</th><th>Usuario</th><th>Base</th><th></th></tr></thead>
+        <tbody id="listaConexiones"></tbody>
       </table>
     </section>
 
@@ -105,6 +151,10 @@
             <tr><td>Imagen, QR…</td><td>Fija (un logo): súbela en el elemento. Que la mande la app: marca «Editable» y ponle de nombre el del dato (una imagen en <code>data:image/png;base64,…</code>, el texto del QR…).</td></tr>
           </tbody>
         </table>
+        <h3>Con datos de la base de datos</h3>
+        <p>En la pestaña Conexiones se da de alta la base de datos. En el editor, en «De dónde salen los datos», se elige la conexión, los parámetros que mandará la app (<code>id</code>) y las consultas. Cada consulta deja sus filas con su nombre: <code>pedido</code> con «una fila» se usa como <code>{pedido.cliente}</code>; <code>lineas</code> rellena la tabla que se llama <code>lineas</code>. Los parámetros también están en <code>{parametros.id}</code>.</p>
+        <pre>SELECT numero, cliente, fecha, total FROM pedidos WHERE id = :id</pre>
+        <p>«Probar consultas» enseña lo que sale con los valores de prueba, y la vista previa ya usa esos datos. Con el mismo grupo (<code>pedido</code>) se juntan los informes de un tipo de documento (pedido de compra, de venta, confirmación…) para que la app deje elegir.</p>
         <h3>Formato en español</h3>
         <table class="tabla">
           <tbody>
@@ -120,7 +170,8 @@
         <p class="suave">Si una marca no se puede resolver (un dato que no viene), sale tal cual, entre llaves: así se ve en la vista previa.</p>
         <h3>Desde otra app</h3>
         <pre id="ejemploLlamada"></pre>
-        <p>Responde con el PDF. Si algo falla, con un JSON <code>{"error": "…"}</code>. <code>GET /api/plantillas</code> (con la llave) lista las plantillas.</p>
+        <p>Si la plantilla lee de la base de datos, basta con los parámetros: <code>{"plantilla": "pedido-venta", "parametros": {"id": 123}}</code>.</p>
+        <p>Responde con el PDF. Si algo falla, con un JSON <code>{"error": "…"}</code>. <code>GET /api/plantillas</code> (con la llave) lista las plantillas con su grupo y sus parámetros; <code>GET /api/plantillas?grupo=pedido</code>, solo las de ese grupo.</p>
       </div>
     </section>
   </main>

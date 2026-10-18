@@ -45,15 +45,17 @@ function leerTexto(fichero) {
   });
 }
 
-function llamada(nombre, datos) {
+function llamada(nombre, datos, parametros) {
+  const cuerpo = parametros && Object.keys(parametros).length
+    ? { plantilla: nombre, nombre: 'Documento', parametros }
+    : { plantilla: nombre, nombre: 'Documento', datos };
   return 'POST ' + base + '/api/generar\n' +
-    'Authorization: Bearer $REPORT_LLAVE\nContent-Type: application/json\n\n' +
-    JSON.stringify({ plantilla: nombre, nombre: 'Documento', datos: datos }, null, 2);
+    'Authorization: Bearer $REPORT_LLAVE\nContent-Type: application/json\n\n' + JSON.stringify(cuerpo, null, 2);
 }
 
 // ── pestañas ──────────────────────────────────────────────────────────────
 
-const cargas = { plantillas: cargarPlantillas, registro: cargarRegistro, llaves: cargarLlaves, ayuda: async () => {} };
+const cargas = { plantillas: cargarPlantillas, registro: cargarRegistro, conexiones: cargarConexiones, llaves: cargarLlaves, ayuda: async () => {} };
 
 document.querySelectorAll('#pestanas button').forEach(b => b.addEventListener('click', () => {
   document.querySelectorAll('#pestanas button').forEach(x => x.classList.toggle('activa', x === b));
@@ -99,7 +101,17 @@ async function cargarPlantillas() {
     p.textContent = 'Todavía no hay plantillas.';
     caja.append(p);
   }
+  // Por grupos (pedido, factura…); las sueltas al final.
+  let grupo = null;
+  const conGrupos = lista.some(p => p.grupo);
   lista.forEach(p => {
+    if (conGrupos && p.grupo !== grupo) {
+      grupo = p.grupo;
+      const h = document.createElement('div');
+      h.className = 'grupo-titulo';
+      h.textContent = grupo || 'Sin grupo';
+      caja.append(h);
+    }
     const t = document.createElement('div');
     t.className = 'tarjeta' + (actual && actual.nombre === p.nombre ? ' activa' : '');
     t.dataset.nombre = p.nombre;
@@ -112,6 +124,7 @@ async function cargarPlantillas() {
     t.addEventListener('click', () => abrir(p).catch(e => aviso(e.message)));
     caja.append(t);
   });
+  $('grupos').replaceChildren(...[...new Set(lista.map(p => p.grupo).filter(Boolean))].map(g => new Option(g)));
   return lista;
 }
 
@@ -128,7 +141,9 @@ async function abrir(p) {
   limpiarResultado();
   const nueva = p.formatos.length > 0;
   $('eAntigua').classList.toggle('hidden', nueva);
+  $('eDatos').classList.toggle('hidden', !nueva);
   ['eGuardar', 'eCompleta', 'eVer', 'eCopiar', 'eDescargar'].forEach(id => { $(id).disabled = !nueva; });
+  if (nueva) await ponerOrigen(p).catch(e => aviso(e.message));
   if (disenador) { disenador.destroy(); disenador = null; }
   $('lienzo').replaceChildren();
   if (!nueva) return;
@@ -147,6 +162,112 @@ async function abrir(p) {
     $('eCargando').classList.add('hidden');
   }
 }
+
+// ── de dónde salen los datos: grupo, conexión, parámetros y consultas ──────
+
+function quitar(boton, fila) {
+  boton.addEventListener('click', () => { fila.remove(); marcarCambios(true); });
+}
+
+function filaParametro(prm) {
+  const fila = document.createElement('div');
+  fila.className = 'parametro';
+  const nombre = Object.assign(document.createElement('input'), { placeholder: 'nombre (id)', value: prm.nombre || '' });
+  nombre.className = 'p-nombre';
+  const prueba = Object.assign(document.createElement('input'), { placeholder: 'valor de prueba (1)', value: prm.prueba || '' });
+  prueba.className = 'p-prueba';
+  const b = Object.assign(document.createElement('button'), { textContent: 'Quitar', className: 'enlace' });
+  quitar(b, fila);
+  fila.append(nombre, prueba, b);
+  $('eParametros').append(fila);
+}
+
+function filaConsulta(c) {
+  const fila = document.createElement('div');
+  fila.className = 'consulta';
+  const nombre = Object.assign(document.createElement('input'), { placeholder: 'nombre (pedido, lineas…)', value: c.nombre || '' });
+  nombre.className = 'c-nombre';
+  const una = document.createElement('label');
+  una.className = 'una';
+  una.title = 'Una sola fila: se usa como {pedido.cliente}. Sin marcar, una lista para una tabla.';
+  const caja = Object.assign(document.createElement('input'), { type: 'checkbox', checked: !!c.una });
+  caja.className = 'c-una';
+  una.append(caja, 'una fila');
+  const sql = Object.assign(document.createElement('textarea'), { placeholder: 'SELECT … FROM … WHERE id = :id', value: c.sql || '', spellcheck: false });
+  sql.className = 'c-sql';
+  const b = Object.assign(document.createElement('button'), { textContent: 'Quitar', className: 'enlace' });
+  quitar(b, fila);
+  fila.append(nombre, una, sql, b);
+  $('eConsultas').append(fila);
+}
+
+function verConDatos() {
+  $('eConDatos').classList.toggle('hidden', !$('eConexion').value);
+  $('eProbarConsultas').classList.toggle('hidden', !$('eConexion').value);
+}
+
+async function ponerOrigen(p) {
+  const o = p.origen || {};
+  $('eGrupo').value = p.grupo || '';
+  const lista = await api('GET', '/conexiones');
+  const sel = $('eConexion');
+  sel.replaceChildren(new Option('Ninguna: los datos los manda la app', ''), ...lista.map(c => new Option(c.nombre + ' (' + c.host + ' · ' + c.base + ')', c.nombre)));
+  if (o.conexion && !lista.some(c => c.nombre === o.conexion)) sel.add(new Option(o.conexion + ' (no existe en este entorno)', o.conexion));
+  sel.value = o.conexion || '';
+  $('eParametros').replaceChildren();
+  $('eConsultas').replaceChildren();
+  (o.parametros || []).forEach(filaParametro);
+  (o.consultas || []).forEach(filaConsulta);
+  $('eResultado').classList.add('hidden');
+  $('eConsultaError').classList.add('hidden');
+  verConDatos();
+}
+
+function origenEscrito() {
+  const conexion = $('eConexion').value;
+  if (!conexion) return { conexion: '', parametros: [], consultas: [] };
+  return {
+    conexion,
+    parametros: [...document.querySelectorAll('#eParametros .parametro')].map(f => ({
+      nombre: f.querySelector('.p-nombre').value.trim(), prueba: f.querySelector('.p-prueba').value
+    })),
+    consultas: [...document.querySelectorAll('#eConsultas .consulta')].map(f => ({
+      nombre: f.querySelector('.c-nombre').value.trim(), una: f.querySelector('.c-una').checked, sql: f.querySelector('.c-sql').value
+    }))
+  };
+}
+
+const parametrosPrueba = (o) => Object.fromEntries(o.parametros.filter(x => x.nombre).map(x => [x.nombre, x.prueba]));
+
+$('eConexion').addEventListener('change', () => {
+  verConDatos();
+  if ($('eConexion').value && !document.querySelector('#eConsultas .consulta')) {
+    filaParametro({ nombre: 'id', prueba: '1' });
+    filaConsulta({ nombre: 'pedido', una: true, sql: '' });
+  }
+  marcarCambios(true);
+});
+$('eMasParametro').addEventListener('click', () => { filaParametro({}); marcarCambios(true); });
+$('eMasConsulta').addEventListener('click', () => { filaConsulta({}); marcarCambios(true); });
+$('eDatos').addEventListener('input', () => marcarCambios(true));
+
+$('eProbarConsultas').addEventListener('click', async () => {
+  const b = $('eProbarConsultas');
+  b.disabled = true;
+  $('eConsultaError').classList.add('hidden');
+  try {
+    const o = origenEscrito();
+    const datos = await api('POST', '/consultar', { origen: o, parametros: parametrosPrueba(o) });
+    $('eResultado').textContent = JSON.stringify(datos, null, 2);
+    $('eResultado').classList.remove('hidden');
+  } catch (e) {
+    $('eResultado').classList.add('hidden');
+    $('eConsultaError').textContent = e.message;
+    $('eConsultaError').classList.remove('hidden');
+  } finally {
+    b.disabled = false;
+  }
+});
 
 // Pantalla completa: el diseñador ocupa toda la ventana; la vista previa se abre en otra pestaña.
 function pantallaCompleta(si) {
@@ -199,7 +320,8 @@ $('crear').addEventListener('click', () => {
     .catch(e => aviso(e.message));
 });
 
-// Importa lo que da «Descargar»: { nombre, titulo, ejemplo, plantilla }.
+// Importa lo que da «Descargar» ({ nombre, titulo, grupo, origen, ejemplo, plantilla })
+// o «Descargar todas» ({ plantillas: [...] }).
 $('nFichero').addEventListener('change', async () => {
   const f = $('nFichero').files[0];
   $('nFichero').value = '';
@@ -207,10 +329,19 @@ $('nFichero').addEventListener('change', async () => {
   try {
     let j;
     try { j = JSON.parse(await leerTexto(f)); } catch (e) { throw new Error('El fichero no es JSON.'); }
+    if (j && Array.isArray(j.plantillas)) {
+      const repetidas = j.plantillas.map(p => p.nombre).filter(plantillasConNombre);
+      const pregunta = 'Importar ' + j.plantillas.length + ' plantillas' + (repetidas.length ? '; se sustituyen las que ya hay: ' + repetidas.join(', ') : '') + '. ¿Seguir?';
+      if (!confirm(pregunta)) return;
+      const r = await api('POST', '/importar', j);
+      aviso('Importadas: ' + r.importadas.join(', '), true);
+      await cargarPlantillas();
+      return;
+    }
     if (j && j.schemas) j = { plantilla: j };
     const nombre = $('nNombre').value.trim() || j.nombre || f.name.replace(/\.json$/i, '').toLowerCase();
     if (plantillasConNombre(nombre) && !confirm('Ya hay una plantilla «' + nombre + '». ¿Sustituirla?')) return;
-    await crear({ nombre, titulo: $('nTitulo').value.trim() || j.titulo, plantilla: j.plantilla, ejemplo: j.ejemplo });
+    await crear({ nombre, titulo: $('nTitulo').value.trim() || j.titulo, plantilla: j.plantilla, ejemplo: j.ejemplo, grupo: j.grupo, origen: j.origen });
     $('nNombre').value = '';
     $('nTitulo').value = '';
   } catch (e) { aviso(e.message); }
@@ -222,7 +353,8 @@ async function guardar() {
   if (!actual || !disenador) return;
   try {
     const p = await api('PUT', '/plantillas/' + encodeURIComponent(actual.nombre), {
-      titulo: $('eTitulo').value, ejemplo: ejemploEscrito(), plantilla: disenador.getTemplate()
+      titulo: $('eTitulo').value, ejemplo: ejemploEscrito(), plantilla: disenador.getTemplate(),
+      grupo: $('eGrupo').value, origen: origenEscrito()
     });
     actual = p;
     marcarCambios(false);
@@ -247,13 +379,15 @@ $('eBorrar').addEventListener('click', async () => {
   } catch (e) { aviso(e.message); }
 });
 
+$('descargarTodas').addEventListener('click', () => { location.href = 'api/admin/exportar'; });
+
 $('eDescargar').addEventListener('click', () => {
   location.href = 'api/admin/plantillas/' + encodeURIComponent(actual.nombre) + '/fichero';
 });
 
 $('eCopiar').addEventListener('click', async () => {
   try {
-    await navigator.clipboard.writeText(llamada(actual.nombre, ejemploEscrito()));
+    await navigator.clipboard.writeText(llamada(actual.nombre, ejemploEscrito(), parametrosPrueba(origenEscrito())));
     aviso('Copiado.', true);
   } catch (e) { aviso(e.message); }
 });
@@ -269,7 +403,10 @@ $('eVer').addEventListener('click', async () => {
     const r = await fetch('api/admin/probar', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ plantilla: actual.nombre, datos: ejemploEscrito(), diseno: disenador ? disenador.getTemplate() : undefined })
+      body: JSON.stringify({
+        plantilla: actual.nombre, datos: ejemploEscrito(), diseno: disenador ? disenador.getTemplate() : undefined,
+        origen: origenEscrito(), parametros: parametrosPrueba(origenEscrito())
+      })
     });
     if (r.status === 401) { location.href = 'login'; return; }
     if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'Error ' + r.status);
@@ -320,6 +457,64 @@ async function cargarRegistro() {
 }
 
 $('filtroApp').addEventListener('change', () => cargarRegistro().catch(e => aviso(e.message)));
+
+// ── conexiones ────────────────────────────────────────────────────────────
+
+const campoConexion = { nombre: 'cNombre', host: 'cHost', puerto: 'cPuerto', usuario: 'cUsuario', base: 'cBase' };
+
+async function cargarConexiones() {
+  const lista = await api('GET', '/conexiones');
+  const cuerpo = $('listaConexiones');
+  cuerpo.replaceChildren();
+  lista.forEach(c => {
+    const tr = document.createElement('tr');
+    celda(tr, c.nombre);
+    celda(tr, c.host + ':' + c.puerto);
+    celda(tr, c.usuario + (c.conClave ? '' : ' (sin contraseña)'));
+    celda(tr, c.base);
+    const td = celda(tr, '');
+    const probar = Object.assign(document.createElement('button'), { textContent: 'Probar' });
+    probar.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      probar.disabled = true;
+      try {
+        const r = await api('POST', '/conexiones/' + encodeURIComponent(c.nombre) + '/probar', {});
+        aviso('«' + c.nombre + '» responde: ' + r.version + ', base ' + r.base + '.', true);
+      } catch (err) { aviso(err.message); } finally { probar.disabled = false; }
+    });
+    const borrar = Object.assign(document.createElement('button'), { textContent: 'Borrar', className: 'peligro' });
+    borrar.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (!confirm('¿Borrar la conexión «' + c.nombre + '»? Los informes que lean de ella dejarán de salir.')) return;
+      try { await api('DELETE', '/conexiones/' + encodeURIComponent(c.nombre)); cargarConexiones(); } catch (err) { aviso(err.message); }
+    });
+    td.append(probar, ' ', borrar);
+    tr.addEventListener('click', () => {
+      for (const [k, id] of Object.entries(campoConexion)) $(id).value = c[k];
+      $('cClave').value = '';
+      $('cClave').placeholder = c.conClave ? 'contraseña (vacía: se queda la que tiene)' : 'contraseña';
+    });
+    cuerpo.append(tr);
+  });
+  if (!lista.length) {
+    const tr = document.createElement('tr');
+    celda(tr, 'Todavía no hay conexiones.').colSpan = 5;
+    cuerpo.append(tr);
+  }
+}
+
+$('cGuardar').addEventListener('click', async () => {
+  try {
+    const cuerpo = Object.fromEntries(Object.entries(campoConexion).map(([k, id]) => [k, $(id).value.trim()]));
+    cuerpo.clave = $('cClave').value;
+    const c = await api('POST', '/conexiones', cuerpo);
+    Object.values(campoConexion).forEach(id => { $(id).value = id === 'cPuerto' ? '3306' : ''; });
+    $('cClave').value = '';
+    $('cClave').placeholder = 'contraseña';
+    aviso('Conexión «' + c.nombre + '» guardada.', true);
+    await cargarConexiones();
+  } catch (e) { aviso(e.message); }
+});
 
 // ── llaves ────────────────────────────────────────────────────────────────
 

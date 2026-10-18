@@ -16,6 +16,19 @@ permissions:
 jobs:
   comprobar:
     runs-on: ubuntu-latest
+    # Una MariaDB para probar las conexiones y los informes con consultas (tests/bd.js).
+    services:
+      mariadb:
+        image: mariadb:11
+        env:
+          MARIADB_ROOT_PASSWORD: raiz-de-prueba
+          MARIADB_DATABASE: erp
+          MARIADB_USER: rs
+          MARIADB_PASSWORD: prueba-rs
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd "healthcheck.sh --connect --innodb_initialized"
+          --health-interval 5s --health-timeout 5s --health-retries 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -29,6 +42,8 @@ jobs:
       - name: el diseñador se empaqueta
         run: npm run web
       - name: pruebas
+        env:
+          RS_PRUEBA_BD: 127.0.0.1:3306:rs:prueba-rs:erp
         run: npm test
 
   # En cada PR: la imagen se construye, saca el PDF de ejemplo y sirve el diseñador.

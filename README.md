@@ -5,8 +5,12 @@ source: las plantillas se diseñan en la propia pantalla (arrastrar textos, tabl
 ven al momento con datos de ejemplo, y las apps mandan sus datos y reciben el PDF.
 
 - **Diseñador en la web**: crear y editar plantillas, con vista previa del PDF.
+- **Datos de la base de datos**: una plantilla puede leer de MariaDB/MySQL con sus consultas; la app
+  solo manda el id (`{"plantilla": "pedido-venta", "parametros": {"id": 123}}`).
+- **Grupos**: varios informes de un mismo documento (pedido de compra, de venta, confirmación…) para
+  que la app deje elegir.
 - **Una sola puerta para las apps**: `POST /api/generar`, con la llave de cada app.
-- **Pantalla** (IT, con Keycloak): plantillas, registro de lo generado y llaves.
+- **Pantalla** (IT, con Keycloak): plantillas, conexiones, registro de lo generado y llaves.
 
 Por dentro, todo open source: [pdfme](https://pdfme.com) (MIT) para el diseñador y para generar el
 PDF, Express y SQLite. Sin LibreOffice: un PDF tarda décimas de segundo.
@@ -34,7 +38,18 @@ Responde con el PDF (`Content-Disposition` con el nombre). Errores, con `{ "erro
 (datos), `401` (llave), `404` (no existe la plantilla), `422` (no se ha podido generar; queda en el
 registro), `429` (más de 60 por minuto).
 
-`GET /api/plantillas` (con la llave) devuelve `[{ nombre, titulo, formatos }]`.
+Si la plantilla lee de la base de datos, la app solo manda sus parámetros:
+
+```
+-d '{ "plantilla": "pedido-venta", "nombre": "Pedido 123", "parametros": { "id": 123 } }'
+```
+
+Lo que mande además en `datos` se suma a lo que sale de las consultas. Sin un parámetro, `400`; si la
+base de datos no responde, `502`.
+
+`GET /api/plantillas` (con la llave) devuelve `[{ nombre, titulo, grupo, formatos, parametros }]`;
+`GET /api/plantillas?grupo=pedido`, solo las de ese grupo (para ofrecer «Pedido de venta», «Pedido de
+compra»… y generar la elegida).
 
 En la pantalla, «Copiar la llamada» da el cuerpo exacto con los datos de ejemplo de la plantilla.
 
@@ -64,14 +79,40 @@ Si una marca no se puede resolver (un dato que no viene), sale tal cual, entre l
 la app nunca se interpreta como marca. Ojo con los nombres de los elementos de texto: si uno se llama
 como un dato (`cliente`), el diseñador lo confunde al dibujarlo; mejor `bloque-cliente`.
 
-**Descargar** da la plantilla con sus datos de ejemplo en un `.json`; **Importar .json** la sube en
-otro entorno (así se pasa de DEV a PRO). Al arrancar por primera vez, la app trae la plantilla
+## Informes con datos de la base de datos
+
+1. **Conexiones** → nombre (`erp`), servidor (el nombre del contenedor en la red del servidor, como
+   `incidencias-db`, o una IP), puerto, usuario, contraseña y base. **Probar** dice si responde. La
+   contraseña se guarda cifrada (AES-256-GCM, con la clave de `/datos/.clave-conexiones` o `RS_CLAVE`)
+   y no sale nunca por la API.
+2. En el editor de la plantilla, **De dónde salen los datos**: el grupo, la conexión, los parámetros
+   (`id`, con un valor de prueba) y las consultas:
+
+| Consulta | «una fila» | En el diseño |
+|---|---|---|
+| `pedido`: `SELECT numero, cliente, fecha, total FROM pedidos WHERE id = :id` | sí | `{pedido.cliente}`, `{enEuros(pedido.total)}` |
+| `lineas`: `SELECT concepto, cantidad, importe FROM lineas_pedido WHERE pedido_id = :id` | no | la tabla que se llama `lineas` |
+
+3. **Probar consultas** enseña lo que sale con los valores de prueba; **Vista previa** ya genera el
+   PDF con esos datos.
+
+Las consultas solo leen: tienen que empezar por `SELECT` o `WITH`, una sentencia, sin `INTO OUTFILE`,
+y van dentro de una transacción de solo lectura. Como mucho 10 por plantilla, 5000 filas y 15 s cada
+una. Aun así, mejor un usuario de la base de datos con permiso solo de lectura. Las fechas salen como
+texto (`2026-10-12`), listas para `comoFecha`.
+
+## Llevarlas a otro sitio
+
+**Descargar** da una plantilla (diseño, grupo, consultas y datos de ejemplo) en un `.json`; **Descargar
+todas** da todas en `informes.json`, para guardarlas en una carpeta o pasarlas de DEV a PRO.
+**Importar .json** acepta los dos. Las conexiones no viajan (llevan contraseña): en el otro entorno hay
+que crear una con el mismo nombre. Al arrancar por primera vez, la app trae la plantilla
 `ejemplo` (`ejemplos/plantilla.json` y `ejemplos/datos.json`).
 
 ## Configuración
 
 El servidor pone Keycloak y la dirección pública; no hace falta nada a mano. Los datos (plantillas,
-registro, llaves) están en `/datos`, el volumen que da el servidor. El registro guarda qué se generó,
+conexiones, registro, llaves) están en `/datos`, el volumen que da el servidor. El registro guarda qué se generó,
 no el documento.
 
 Entra en la pantalla quien está en IT o en `<ENTORNO>/ReportServer/Admin`.
@@ -90,6 +131,6 @@ versión (`sha-xxxxxxx`, la del último push a `main`), probar en `dev.<dominio>
 ```
 npm install
 npm run web    # empaqueta el diseñador en public/js
-npm test
+npm test       # con RS_PRUEBA_BD=host:puerto:usuario:clave:base prueba también las consultas
 RS_DATOS=./datos node server.js   # http://localhost:3000, sin Keycloak
 ```

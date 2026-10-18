@@ -4,6 +4,8 @@ const express = require('express');
 const llaves = require('./src/llaves');
 const plantillas = require('./src/plantillas');
 const { generar, registro } = require('./src/generar');
+const conexiones = require('./src/conexiones');
+const origenes = require('./src/origen');
 const sesion = require('./src/sesion');
 const { prefijoDe, conPrefijo } = require('./src/ruta');
 
@@ -31,6 +33,7 @@ app.use('/marca', express.static(path.join(PUBLICO, 'marca'), { redirect: false,
 
 // Las plantillas (con sus imágenes) llegan desde la pantalla; los datos de un documento, hasta 2 MB.
 app.use(['/api/admin/plantillas', '/api/admin/probar'], express.json({ limit: '14mb' }));
+app.use('/api/admin/importar', express.json({ limit: '60mb' }));
 app.use(express.json({ limit: '2mb' }));
 app.use('/api', (req, res, next) => {
   if (req.method !== 'GET' && req.method !== 'DELETE' && !req.is('application/json')) {
@@ -53,7 +56,11 @@ function enviarDocumento(res, doc) {
 app.get('/api/plantillas', (req, res, next) => {
   try {
     llaves.appDe(req);
-    res.json(plantillas.lista().map(p => ({ nombre: p.nombre, titulo: p.titulo, formatos: p.formatos })));
+    // ?grupo=pedido: los informes de un tipo de documento, para que la app deje elegir.
+    const grupo = String(req.query.grupo || '').trim().toLowerCase();
+    res.json(plantillas.lista().filter(p => p.formatos.length && (!grupo || p.grupo === grupo)).map(p => ({
+      nombre: p.nombre, titulo: p.titulo, grupo: p.grupo, formatos: p.formatos, parametros: p.origen.parametros.map(x => x.nombre)
+    })));
   } catch (e) { next(e); }
 });
 
@@ -100,11 +107,33 @@ admin.get('/plantillas/:nombre/fichero', (req, res) => {
   if (!p) return res.status(404).json({ error: 'No existe esa plantilla.' });
   if (p.extension !== plantillas.TIPO) return res.status(404).json({ error: 'Es de la versión anterior: ya no se descarga.' });
   // La plantilla y sus datos de ejemplo, para guardarla o llevarla de DEV a PRO.
-  enviarDocumento(res, {
-    tipo: plantillas.TIPOS.json, fichero: p.nombre + '.json',
-    contenido: JSON.stringify({ nombre: p.nombre, titulo: p.titulo, ejemplo: p.ejemplo, plantilla: plantillas.diseno(p) }, null, 2)
-  });
+  enviarDocumento(res, { tipo: plantillas.TIPOS.json, fichero: p.nombre + '.json', contenido: JSON.stringify(plantillas.exportar(p), null, 2) });
 });
+// Todas de una vez (para guardarlas en una carpeta o pasarlas a otro entorno) y su vuelta.
+admin.get('/exportar', (req, res) => {
+  const todas = plantillas.lista().filter(p => p.extension === plantillas.TIPO).map(plantillas.exportar);
+  enviarDocumento(res, { tipo: plantillas.TIPOS.json, fichero: 'informes.json', contenido: JSON.stringify({ plantillas: todas }, null, 2) });
+});
+admin.post('/importar', espera(async (req, res) => {
+  const lista = Array.isArray((req.body || {}).plantillas) ? req.body.plantillas : [];
+  if (!lista.length) throw llaves.error('No hay plantillas que importar.');
+  const hechas = [];
+  for (const p of lista) hechas.push((await plantillas.guardar(p)).nombre);
+  res.json({ importadas: hechas });
+}));
+
+// Conexiones a bases de datos (la contraseña no sale nunca).
+admin.get('/conexiones', (req, res) => res.json(conexiones.lista()));
+admin.post('/conexiones', (req, res) => res.json(conexiones.guardar(req.body || {})));
+admin.delete('/conexiones/:nombre', (req, res) => { conexiones.borrar(req.params.nombre); res.json({ ok: true }); });
+admin.post('/conexiones/:nombre/probar', espera(async (req, res) => res.json(await conexiones.probar(req.params.nombre))));
+// Lanza las consultas de un informe con parámetros de prueba: lo que verá el diseño.
+admin.post('/consultar', espera(async (req, res) => {
+  const b = req.body || {};
+  const o = origenes.validar(b.origen);
+  if (!origenes.conDatos(o)) throw llaves.error('Elige una conexión y escribe al menos una consulta.');
+  res.json(await origenes.leer(o, b.parametros || origenes.parametrosPrueba(o)));
+}));
 admin.post('/probar', espera(async (req, res) => enviarDocumento(res, await generar('pantalla', req.body || {}, true))));
 admin.get('/registro', (req, res) => res.json(registro(req.query)));
 admin.get('/llaves', (req, res) => res.json(llaves.lista()));
