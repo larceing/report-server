@@ -1,40 +1,35 @@
-// Plantillas: documentos de Word, LibreOffice o Excel con marcas de Carbone
-// ({d.cliente}, {d.lineas[i].concepto}…). El fichero va en /datos/plantillas
-// con el nombre de la plantilla; la ficha (título, datos de ejemplo) en SQLite.
+// Plantillas: el diseño de cada documento, hecho con el diseñador de la
+// pantalla (pdfme). El JSON va en /datos/plantillas/<nombre>.json; la ficha
+// (título, datos de ejemplo) en SQLite.
 
 const fs = require('fs');
 const path = require('path');
 const { bd, ahora, PLANTILLAS } = require('./bd');
 const { error } = require('./llaves');
+const motor = require('./motor');
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const NOMBRE = /^[a-z0-9][a-z0-9-]{0,39}$/;
+const TIPO = 'pdfme';
+const FORMATOS = ['pdf'];
+const TIPOS = { pdf: 'application/pdf', json: 'application/json' };
 
-// Lo que se puede sacar de cada tipo de plantilla. El primero es el de siempre.
-const FORMATOS = {
-  docx: ['pdf', 'docx', 'odt'],
-  odt: ['pdf', 'odt', 'docx'],
-  xlsx: ['pdf', 'xlsx', 'ods', 'csv'],
-  ods: ['pdf', 'ods', 'xlsx', 'csv']
-};
+// Una página A4 en blanco con márgenes de 15 mm.
+const EN_BLANCO = () => ({ basePdf: { width: 210, height: 297, padding: [15, 15, 15, 15] }, schemas: [[]] });
 
-const TIPOS = {
-  pdf: 'application/pdf',
-  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  odt: 'application/vnd.oasis.opendocument.text',
-  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  ods: 'application/vnd.oasis.opendocument.spreadsheet',
-  csv: 'text/csv; charset=utf-8'
-};
+const fichero = (p) => path.join(PLANTILLAS, p.nombre + '.' + (p.extension === TIPO ? 'json' : p.extension));
 
-const fichero = (p) => path.join(PLANTILLAS, p.nombre + '.' + p.extension);
-
+// Las de antes de pdfme (Word) siguen en la lista para que se vean, pero ya no salen.
 function ficha(fila) {
-  return fila && { ...fila, formatos: FORMATOS[fila.extension], ejemplo: JSON.parse(fila.ejemplo || '{}') };
+  return fila && { ...fila, formatos: fila.extension === TIPO ? FORMATOS : [], ejemplo: JSON.parse(fila.ejemplo || '{}') };
 }
 
 const lista = () => bd.prepare('SELECT * FROM plantilla ORDER BY nombre').all().map(ficha);
 const una = (nombre) => ficha(bd.prepare('SELECT * FROM plantilla WHERE nombre = ?').get(String(nombre || '')));
+
+function diseno(p) {
+  return JSON.parse(fs.readFileSync(fichero(p), 'utf8'));
+}
 
 function ejemploValido(ejemplo) {
   let datos = ejemplo === undefined || ejemplo === '' ? {} : ejemplo;
@@ -45,33 +40,44 @@ function ejemploValido(ejemplo) {
   return JSON.stringify(datos);
 }
 
-// Docx, xlsx, odt y ods son ficheros zip: empiezan por «PK».
-function guardar({ nombre, titulo, fichero: nombreFichero, contenido, ejemplo }) {
+async function disenoValido(plantilla) {
+  let t = plantilla;
+  if (typeof t === 'string') {
+    try { t = JSON.parse(t); } catch (e) { throw error('La plantilla no es JSON válido.'); }
+  }
+  if (!t || typeof t !== 'object' || !Array.isArray(t.schemas)) throw error('Eso no es una plantilla de Report Server.');
+  try {
+    await motor.comprobar(t);
+  } catch (e) {
+    throw error('La plantilla no es válida: ' + String(e.message || e).slice(0, 300));
+  }
+  const json = JSON.stringify(t);
+  if (Buffer.byteLength(json) > MAX_BYTES) throw error('Como mucho 10 MB (las imágenes ocupan mucho).');
+  return json;
+}
+
+// Crear (en blanco, o con un diseño importado) o sustituir el diseño de una que existe.
+async function guardar({ nombre, titulo, plantilla, ejemplo }) {
   nombre = String(nombre || '').trim();
   if (!NOMBRE.test(nombre)) throw error('Nombre: minúsculas, números y guiones (resumen, parte-de-horas…).');
-  const extension = String(nombreFichero || '').toLowerCase().split('.').pop();
-  if (!FORMATOS[extension]) throw error('La plantilla tiene que ser .docx, .odt, .xlsx u .ods.');
-  const buf = Buffer.from(String(contenido || ''), 'base64');
-  if (!buf.length) throw error('El fichero está vacío.');
-  if (buf.length > MAX_BYTES) throw error('Como mucho 10 MB.');
-  if (buf.subarray(0, 2).toString('latin1') !== 'PK') throw error('El fichero no es un documento de Office o LibreOffice.');
-
+  const json = await disenoValido(plantilla === undefined ? EN_BLANCO() : plantilla);
   const anterior = una(nombre);
   const datosEjemplo = ejemplo === undefined && anterior ? JSON.stringify(anterior.ejemplo) : ejemploValido(ejemplo);
   const t = String(titulo || '').trim().slice(0, 80) || (anterior ? anterior.titulo : nombre);
 
-  if (anterior && anterior.extension !== extension) fs.rmSync(fichero(anterior), { force: true });
-  fs.writeFileSync(fichero({ nombre, extension }), buf);
+  if (anterior && anterior.extension !== TIPO) fs.rmSync(fichero(anterior), { force: true });
+  fs.writeFileSync(fichero({ nombre, extension: TIPO }), json);
   bd.prepare(`INSERT INTO plantilla (nombre, titulo, extension, bytes, ejemplo, creada, actualizada) VALUES (?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT (nombre) DO UPDATE SET titulo = excluded.titulo, extension = excluded.extension, bytes = excluded.bytes,
       ejemplo = excluded.ejemplo, actualizada = excluded.actualizada`)
-    .run(nombre, t, extension, buf.length, datosEjemplo, ahora(), ahora());
+    .run(nombre, t, TIPO, Buffer.byteLength(json), datosEjemplo, ahora(), ahora());
   return una(nombre);
 }
 
-function editar(nombre, { titulo, ejemplo }) {
+async function editar(nombre, { titulo, plantilla, ejemplo }) {
   const p = una(nombre);
   if (!p) throw error('No existe esa plantilla.', 404);
+  if (plantilla !== undefined) return guardar({ nombre: p.nombre, titulo: titulo || p.titulo, plantilla, ejemplo });
   bd.prepare('UPDATE plantilla SET titulo = ?, ejemplo = ?, actualizada = ? WHERE nombre = ?')
     .run(String(titulo || '').trim().slice(0, 80) || p.titulo, ejemplo === undefined ? JSON.stringify(p.ejemplo) : ejemploValido(ejemplo), ahora(), p.nombre);
   return una(p.nombre);
@@ -84,4 +90,4 @@ function borrar(nombre) {
   bd.prepare('DELETE FROM plantilla WHERE nombre = ?').run(p.nombre);
 }
 
-module.exports = { FORMATOS, TIPOS, lista, una, guardar, editar, borrar, fichero };
+module.exports = { TIPO, FORMATOS, TIPOS, lista, una, diseno, guardar, editar, borrar, fichero };

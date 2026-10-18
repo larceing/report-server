@@ -72,3 +72,10 @@ pre { background: #0e1b33; color: #e6edf5; padding: 12px; border-radius: 10px; o
 .estado-generado { color: var(--ok); font-weight: 600; }
 .ayuda h3 { margin: 18px 0 6px; font-size: 15px; }
 .ayuda td:first-child { white-space: nowrap; }
+.lienzo { height: 78vh; min-height: 560px; border: 1px solid var(--linea); border-radius: 10px; overflow: hidden; }
+.lienzo:empty { display: none; }
+input.titulo { max-width: 320px; }
+.cambios { font-size: 13px; color: #8a5a00; background: #fff4d6; padding: 2px 8px; border-radius: 6px; }
+.boton-fichero { display: inline-block; font-weight: 400; font-size: 15px; margin: 0; padding: 8px 14px; border: 1px solid var(--linea); border-radius: 8px; background: #fff; cursor: pointer; }
+.boton-fichero input { display: none; }
+main.ancho { max-width: none; }

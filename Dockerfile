@@ -1,18 +1,16 @@
-FROM node:22-bookworm-slim
+# El diseñador de la pantalla (pdfme) se empaqueta aparte: en la imagen final
+# solo quedan el servidor y lo que necesita para generar los PDF.
+FROM node:22-alpine AS web
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY web ./web
+RUN mkdir -p public/js && npm run web
 
-# LibreOffice (sin interfaz) para pasar las plantillas a PDF, y fuentes que
-# sustituyen a las de Office con las mismas medidas (Arial, Times, Calibri,
-# Cambria) para que el PDF no se descuadre.
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-        libreoffice-writer-nogui libreoffice-calc-nogui python3-uno \
-        fonts-dejavu-core fonts-liberation2 fonts-crosextra-carlito fonts-crosextra-caladea \
-    && rm -rf /var/lib/apt/lists/*
+FROM node:22-alpine
 
 WORKDIR /app
-# Carbone busca soffice.bin en el PATH.
-ENV NODE_ENV=production TZ=Europe/Madrid RS_DATOS=/datos HOME=/home/node \
-    PATH=$PATH:/usr/lib/libreoffice/program
+ENV NODE_ENV=production TZ=Europe/Madrid RS_DATOS=/datos
 
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
@@ -20,6 +18,7 @@ RUN npm ci --omit=dev && npm cache clean --force
 COPY server.js ./
 COPY src ./src
 COPY public ./public
+COPY --from=web /app/public/js/disenador.js /app/public/js/pdfium.esm.wasm ./public/js/
 COPY ejemplos ./ejemplos
 
 # El servidor DEV/PRO monta su volumen en /datos; sin él, la carpeta existe igual.

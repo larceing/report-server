@@ -29,8 +29,8 @@ app.use((req, res, next) => {
 app.get(['/version', '/version/'], (req, res) => res.json({ version: process.env.APP_VERSION || 'local' }));
 app.use('/marca', express.static(path.join(PUBLICO, 'marca'), { redirect: false, maxAge: '7d' }));
 
-// Las plantillas suben en base64 dentro del JSON; los datos de un documento, hasta 2 MB.
-app.use('/api/admin/plantillas', express.json({ limit: '14mb' }));
+// Las plantillas (con sus imágenes) llegan desde la pantalla; los datos de un documento, hasta 2 MB.
+app.use(['/api/admin/plantillas', '/api/admin/probar'], express.json({ limit: '14mb' }));
 app.use(express.json({ limit: '2mb' }));
 app.use('/api', (req, res, next) => {
   if (req.method !== 'GET' && req.method !== 'DELETE' && !req.is('application/json')) {
@@ -80,19 +80,32 @@ const requiere = (req, res, next) => {
 };
 
 const admin = express.Router();
+const espera = (f) => (req, res, next) => Promise.resolve(f(req, res)).catch(next);
 admin.get('/yo', (req, res) => res.json({ usuario: req.usuario, base: req.protocol + '://' + req.get('host') + req.prefijo }));
 admin.get('/plantillas', (req, res) => res.json(plantillas.lista()));
-admin.post('/plantillas', (req, res) => res.json(plantillas.guardar(req.body || {})));
-admin.put('/plantillas/:nombre', (req, res) => res.json(plantillas.editar(req.params.nombre, req.body || {})));
+admin.post('/plantillas', espera(async (req, res) => {
+  const b = req.body || {};
+  if (b.plantilla === undefined && plantillas.una(b.nombre)) throw llaves.error('Ya hay una plantilla con ese nombre.', 409);
+  res.json(await plantillas.guardar(b));
+}));
+admin.get('/plantillas/:nombre/diseno', (req, res) => {
+  const p = plantillas.una(req.params.nombre);
+  if (!p || p.extension !== plantillas.TIPO) return res.status(404).json({ error: 'No existe esa plantilla.' });
+  res.set('Cache-Control', 'no-store').json(plantillas.diseno(p));
+});
+admin.put('/plantillas/:nombre', espera(async (req, res) => res.json(await plantillas.editar(req.params.nombre, req.body || {}))));
 admin.delete('/plantillas/:nombre', (req, res) => { plantillas.borrar(req.params.nombre); res.json({ ok: true }); });
 admin.get('/plantillas/:nombre/fichero', (req, res) => {
   const p = plantillas.una(req.params.nombre);
   if (!p) return res.status(404).json({ error: 'No existe esa plantilla.' });
-  enviarDocumento(res, { tipo: plantillas.TIPOS[p.extension], fichero: p.nombre + '.' + p.extension, contenido: fs.readFileSync(plantillas.fichero(p)) });
+  if (p.extension !== plantillas.TIPO) return res.status(404).json({ error: 'Es de la versión anterior: ya no se descarga.' });
+  // La plantilla y sus datos de ejemplo, para guardarla o llevarla de DEV a PRO.
+  enviarDocumento(res, {
+    tipo: plantillas.TIPOS.json, fichero: p.nombre + '.json',
+    contenido: JSON.stringify({ nombre: p.nombre, titulo: p.titulo, ejemplo: p.ejemplo, plantilla: plantillas.diseno(p) }, null, 2)
+  });
 });
-admin.post('/probar', async (req, res, next) => {
-  try { enviarDocumento(res, await generar('pantalla', req.body || {})); } catch (e) { next(e); }
-});
+admin.post('/probar', espera(async (req, res) => enviarDocumento(res, await generar('pantalla', req.body || {}, true))));
 admin.get('/registro', (req, res) => res.json(registro(req.query)));
 admin.get('/llaves', (req, res) => res.json(llaves.lista()));
 admin.post('/llaves', (req, res) => res.json({ llave: llaves.crear((req.body || {}).app) }));
@@ -120,21 +133,20 @@ app.use((err, req, res, next) => {
   res.status(status).json({ error: status === 500 ? 'Error interno.' : err.message });
 });
 
-// La primera vez, una plantilla de ejemplo para ver cómo funciona.
-function sembrarEjemplo() {
-  if (plantillas.lista().length) return;
-  const dir = path.join(__dirname, 'ejemplos');
-  plantillas.guardar({
-    nombre: 'ejemplo', titulo: 'Ejemplo: resumen de servicios', fichero: 'ejemplo.docx',
-    contenido: fs.readFileSync(path.join(dir, 'ejemplo.docx')).toString('base64'),
-    ejemplo: fs.readFileSync(path.join(dir, 'ejemplo.json'), 'utf8')
-  });
+// La primera vez, una plantilla de ejemplo para ver cómo funciona. Si la que hay
+// es la de la versión anterior (Word), se cambia por la nueva.
+async function sembrarEjemplo() {
+  const ejemplo = plantillas.una('ejemplo');
+  if (ejemplo ? ejemplo.extension === plantillas.TIPO : plantillas.lista().length) return;
+  const leer = (f) => JSON.parse(fs.readFileSync(path.join(__dirname, 'ejemplos', f), 'utf8'));
+  await plantillas.guardar({ nombre: 'ejemplo', titulo: 'Ejemplo: resumen de servicios', plantilla: leer('plantilla.json'), ejemplo: leer('datos.json') });
 }
 
 if (require.main === module) {
-  sembrarEjemplo();
+  sembrarEjemplo().catch(e => console.error('No se ha podido poner la plantilla de ejemplo: ' + e.message));
   const puerto = Number(process.env.PORT) || 3000;
   app.listen(puerto, () => console.log('Report Server escuchando en el puerto ' + puerto));
 }
 
 module.exports = app;
+module.exports.sembrarEjemplo = sembrarEjemplo;

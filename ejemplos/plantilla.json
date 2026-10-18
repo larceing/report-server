@@ -1,0 +1,479 @@
+{
+  "basePdf": {
+    "width": 210,
+    "height": 297,
+    "padding": [
+      12,
+      15,
+      12,
+      15
+    ]
+  },
+  "schemas": [
+    [
+      {
+        "name": "cabecera",
+        "type": "rectangle",
+        "position": {
+          "x": 15,
+          "y": 12
+        },
+        "width": 180,
+        "height": 24,
+        "rotate": 0,
+        "opacity": 1,
+        "borderWidth": 0,
+        "borderColor": "#0e1b33",
+        "color": "#0e1b33",
+        "readOnly": true,
+        "radius": 2
+      },
+      {
+        "name": "marca",
+        "type": "text",
+        "content": "HENRY ARCE",
+        "position": {
+          "x": 22,
+          "y": 17
+        },
+        "width": 120,
+        "height": 9,
+        "rotate": 0,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "fontSize": 18,
+        "textFormat": "plain",
+        "overflow": "visible",
+        "fontVariantFallback": "synthetic",
+        "lineHeight": 1.2,
+        "characterSpacing": 0,
+        "fontColor": "#ffffff",
+        "backgroundColor": "",
+        "borderColor": "#000000",
+        "borderWidth": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        },
+        "padding": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        },
+        "opacity": 1,
+        "strikethrough": false,
+        "underline": false,
+        "readOnly": true
+      },
+      {
+        "name": "lema",
+        "type": "text",
+        "content": "BUSINESS APPLICATIONS & DATA",
+        "position": {
+          "x": 22,
+          "y": 26
+        },
+        "width": 120,
+        "height": 5,
+        "rotate": 0,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "fontSize": 7.5,
+        "textFormat": "plain",
+        "overflow": "visible",
+        "fontVariantFallback": "synthetic",
+        "lineHeight": 1.2,
+        "characterSpacing": 0.6,
+        "fontColor": "#35d6c0",
+        "backgroundColor": "",
+        "borderColor": "#000000",
+        "borderWidth": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        },
+        "padding": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        },
+        "opacity": 1,
+        "strikethrough": false,
+        "underline": false,
+        "readOnly": true
+      },
+      {
+        "name": "titulo",
+        "type": "text",
+        "content": "Resumen de servicios",
+        "position": {
+          "x": 15,
+          "y": 44
+        },
+        "width": 180,
+        "height": 10,
+        "rotate": 0,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "fontSize": 18,
+        "textFormat": "plain",
+        "overflow": "visible",
+        "fontVariantFallback": "synthetic",
+        "lineHeight": 1.2,
+        "characterSpacing": 0,
+        "fontColor": "#15202b",
+        "backgroundColor": "",
+        "borderColor": "#000000",
+        "borderWidth": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        },
+        "padding": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        },
+        "opacity": 1,
+        "strikethrough": false,
+        "underline": false,
+        "readOnly": true
+      },
+      {
+        "name": "linea-documento",
+        "type": "text",
+        "content": "Documento: {documento}   ·   Fecha: {comoFecha(fecha)}",
+        "position": {
+          "x": 15,
+          "y": 56
+        },
+        "width": 180,
+        "height": 6,
+        "rotate": 0,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "fontSize": 10,
+        "textFormat": "plain",
+        "overflow": "visible",
+        "fontVariantFallback": "synthetic",
+        "lineHeight": 1.2,
+        "characterSpacing": 0,
+        "fontColor": "#15202b",
+        "backgroundColor": "",
+        "borderColor": "#000000",
+        "borderWidth": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        },
+        "padding": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        },
+        "opacity": 1,
+        "strikethrough": false,
+        "underline": false,
+        "readOnly": true
+      },
+      {
+        "name": "bloque-cliente",
+        "type": "text",
+        "content": "Cliente: {cliente.nombre} ({cliente.nif})\n{cliente.direccion}",
+        "position": {
+          "x": 15,
+          "y": 63
+        },
+        "width": 180,
+        "height": 11,
+        "rotate": 0,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "fontSize": 10,
+        "textFormat": "plain",
+        "overflow": "visible",
+        "fontVariantFallback": "synthetic",
+        "lineHeight": 1.2,
+        "characterSpacing": 0,
+        "fontColor": "#15202b",
+        "backgroundColor": "",
+        "borderColor": "#000000",
+        "borderWidth": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        },
+        "padding": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        },
+        "opacity": 1,
+        "strikethrough": false,
+        "underline": false,
+        "readOnly": true
+      },
+      {
+        "name": "linea-periodo",
+        "type": "text",
+        "content": "Periodo: del {comoFecha(periodo.desde)} al {comoFecha(periodo.hasta)}",
+        "position": {
+          "x": 15,
+          "y": 75
+        },
+        "width": 180,
+        "height": 6,
+        "rotate": 0,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "fontSize": 10,
+        "textFormat": "plain",
+        "overflow": "visible",
+        "fontVariantFallback": "synthetic",
+        "lineHeight": 1.2,
+        "characterSpacing": 0,
+        "fontColor": "#15202b",
+        "backgroundColor": "",
+        "borderColor": "#000000",
+        "borderWidth": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        },
+        "padding": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        },
+        "opacity": 1,
+        "strikethrough": false,
+        "underline": false,
+        "readOnly": true
+      },
+      {
+        "name": "lineas",
+        "type": "table",
+        "position": {
+          "x": 15,
+          "y": 84
+        },
+        "width": 180,
+        "height": 30,
+        "content": "[[\"{comoFecha(dia)}\",\"{concepto}\",\"{conDecimales(horas)}\",\"{enEuros(importe)}\"]]",
+        "showHead": true,
+        "repeatHead": false,
+        "head": [
+          "Día",
+          "Concepto",
+          "Horas",
+          "Importe"
+        ],
+        "headWidthPercentages": [
+          18,
+          52,
+          12,
+          18
+        ],
+        "tableStyles": {
+          "borderColor": "#dde3ea",
+          "borderWidth": 0.2
+        },
+        "headStyles": {
+          "alignment": "left",
+          "verticalAlignment": "middle",
+          "fontSize": 9.5,
+          "lineHeight": 1,
+          "characterSpacing": 0,
+          "fontColor": "#ffffff",
+          "backgroundColor": "#0e1b33",
+          "borderColor": "#0e1b33",
+          "borderWidth": {
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          },
+          "padding": {
+            "top": 2.5,
+            "right": 3,
+            "bottom": 2.5,
+            "left": 3
+          }
+        },
+        "bodyStyles": {
+          "alignment": "left",
+          "verticalAlignment": "middle",
+          "fontSize": 9.5,
+          "lineHeight": 1,
+          "characterSpacing": 0,
+          "fontColor": "#15202b",
+          "backgroundColor": "",
+          "borderColor": "#dde3ea",
+          "borderWidth": {
+            "top": 0.1,
+            "right": 0.1,
+            "bottom": 0.1,
+            "left": 0.1
+          },
+          "padding": {
+            "top": 2.5,
+            "right": 3,
+            "bottom": 2.5,
+            "left": 3
+          },
+          "alternateBackgroundColor": "#f3f5f7"
+        },
+        "columnStyles": {
+          "alignment": {
+            "2": "right",
+            "3": "right"
+          }
+        },
+        "readOnly": true
+      },
+      {
+        "name": "linea-total",
+        "type": "text",
+        "content": "Total: {conDecimales(horas)} h   ·   {enEuros(total)}",
+        "position": {
+          "x": 95,
+          "y": 118
+        },
+        "width": 100,
+        "height": 8,
+        "rotate": 0,
+        "alignment": "right",
+        "verticalAlignment": "top",
+        "fontSize": 12,
+        "textFormat": "plain",
+        "overflow": "visible",
+        "fontVariantFallback": "synthetic",
+        "lineHeight": 1.2,
+        "characterSpacing": 0,
+        "fontColor": "#15202b",
+        "backgroundColor": "",
+        "borderColor": "#000000",
+        "borderWidth": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        },
+        "padding": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        },
+        "opacity": 1,
+        "strikethrough": false,
+        "underline": false,
+        "readOnly": true
+      },
+      {
+        "name": "linea-notas",
+        "type": "text",
+        "content": "{siVacio(notas, \"\")}",
+        "position": {
+          "x": 15,
+          "y": 128
+        },
+        "width": 180,
+        "height": 6,
+        "rotate": 0,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "fontSize": 9,
+        "textFormat": "plain",
+        "overflow": "visible",
+        "fontVariantFallback": "synthetic",
+        "lineHeight": 1.2,
+        "characterSpacing": 0,
+        "fontColor": "#5b6877",
+        "backgroundColor": "",
+        "borderColor": "#000000",
+        "borderWidth": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        },
+        "padding": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        },
+        "opacity": 1,
+        "strikethrough": false,
+        "underline": false,
+        "readOnly": true
+      },
+      {
+        "name": "raya",
+        "type": "line",
+        "position": {
+          "x": 15,
+          "y": 277
+        },
+        "width": 180,
+        "height": 0.3,
+        "rotate": 0,
+        "opacity": 1,
+        "readOnly": true,
+        "color": "#dde3ea"
+      },
+      {
+        "name": "pie",
+        "type": "text",
+        "content": "Henry Arce · Business Applications & Data",
+        "position": {
+          "x": 15,
+          "y": 279
+        },
+        "width": 180,
+        "height": 5,
+        "rotate": 0,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "fontSize": 7.5,
+        "textFormat": "plain",
+        "overflow": "visible",
+        "fontVariantFallback": "synthetic",
+        "lineHeight": 1.2,
+        "characterSpacing": 0,
+        "fontColor": "#5b6877",
+        "backgroundColor": "",
+        "borderColor": "#000000",
+        "borderWidth": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        },
+        "padding": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        },
+        "opacity": 1,
+        "strikethrough": false,
+        "underline": false,
+        "readOnly": true
+      }
+    ]
+  ]
+}

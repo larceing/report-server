@@ -25,11 +25,13 @@ jobs:
       - name: servidor.json es JSON válido
         run: node -e "JSON.parse(require('fs').readFileSync('servidor.json', 'utf8'))"
       - name: sintaxis
-        run: for f in server.js src/*.js public/js/*.js tests/*.js; do node --check "$f"; done
+        run: for f in server.js src/*.js public/js/app.js tests/*.js; do node --check "$f"; done
+      - name: el diseñador se empaqueta
+        run: npm run web
       - name: pruebas
         run: npm test
 
-  # En cada PR: la imagen se construye y saca un PDF de verdad con LibreOffice.
+  # En cada PR: la imagen se construye, saca el PDF de ejemplo y sirve el diseñador.
   imagen-prueba:
     needs: comprobar
     if: github.event_name == 'pull_request'
@@ -43,9 +45,11 @@ jobs:
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:3000/version/ && break; sleep 1; done
           curl -sf -o ejemplo.pdf -X POST http://127.0.0.1:3000/api/admin/probar \
             -H 'Content-Type: application/json' \
-            -d "{\"plantilla\":\"ejemplo\",\"formato\":\"pdf\",\"datos\":$(cat ejemplos/ejemplo.json)}"
+            -d "{\"plantilla\":\"ejemplo\",\"datos\":$(cat ejemplos/datos.json)}"
           head -c 5 ejemplo.pdf | grep -q '%PDF-'
           ls -l ejemplo.pdf
+          curl -sf -o /dev/null -w 'disenador.js %{http_code} %{size_download} bytes\n' http://127.0.0.1:3000/js/disenador.js
+          curl -sf -o /dev/null -w 'pdfium.esm.wasm %{http_code} %{content_type}\n' http://127.0.0.1:3000/js/pdfium.esm.wasm
           docker stats --no-stream rs
       - if: failure()
         run: docker logs rs

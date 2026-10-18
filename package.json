@@ -2,17 +2,24 @@
   "name": "report-server",
   "version": "0.1.0",
   "private": true,
-  "description": "Documentos a partir de plantillas (Word, LibreOffice, Excel) para las apps del servidor DEV/PRO: llaves por app, PDF y registro.",
+  "description": "Informes en PDF para las apps del servidor DEV/PRO: diseñador en la web (pdfme), llaves por app y registro.",
   "main": "server.js",
   "scripts": {
     "start": "node --disable-warning=ExperimentalWarning server.js",
-    "test": "node --disable-warning=ExperimentalWarning tests/api.js && node --disable-warning=ExperimentalWarning tests/acceso.js"
+    "test": "node --disable-warning=ExperimentalWarning tests/api.js && node --disable-warning=ExperimentalWarning tests/acceso.js",
+    "web": "esbuild web/disenador.js --bundle --minify --format=esm --target=es2020 --outfile=public/js/disenador.js --external:node:* --loader:.woff2=dataurl --loader:.ttf=dataurl --log-level=warning && cp node_modules/clawpdf/dist/vendor/pdfium.esm.wasm public/js/"
   },
   "engines": {
     "node": ">=22.13"
   },
   "dependencies": {
-    "carbone": "3.8.2",
+    "@pdfme/common": "6.2.6",
+    "@pdfme/generator": "6.2.6",
+    "@pdfme/schemas": "6.2.6",
     "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "@pdfme/ui": "6.2.6",
+    "esbuild": "0.28.2"
   }
 }

@@ -1,16 +1,15 @@
 # Report Server
 
-Documentos a partir de plantillas para todas las apps del servidor DEV/PRO, como Crystal Reports
-pero con Word: diseñas la plantilla en Word, LibreOffice o Excel, con marcas donde van los datos
-(`{d.cliente}`), y las apps mandan los datos y reciben el PDF.
+Informes en PDF para todas las apps del servidor DEV/PRO, como Crystal Reports pero en la web y open
+source: las plantillas se diseñan en la propia pantalla (arrastrar textos, tablas, imágenes, QR…), se
+ven al momento con datos de ejemplo, y las apps mandan sus datos y reciben el PDF.
 
-- **Una sola puerta**: `POST /api/generar`, con la llave de la app.
-- **Plantillas**: `.docx`, `.odt`, `.xlsx`, `.ods`. Salen en PDF, o en Word, LibreOffice, Excel o CSV.
-- **Pantalla** (IT, con Keycloak): subir plantillas, probarlas con datos de ejemplo y ver el PDF,
-  registro de lo generado y llaves.
+- **Diseñador en la web**: crear y editar plantillas, con vista previa del PDF.
+- **Una sola puerta para las apps**: `POST /api/generar`, con la llave de cada app.
+- **Pantalla** (IT, con Keycloak): plantillas, registro de lo generado y llaves.
 
-Por dentro: [Carbone](https://carbone.io) 3.8 (Carbone Community License: gratis mientras no se
-ofrezca como servicio de generación de documentos a terceros) y LibreOffice sin interfaz para el PDF.
+Por dentro, todo open source: [pdfme](https://pdfme.com) (MIT) para el diseñador y para generar el
+PDF, Express y SQLite. Sin LibreOffice: un PDF tarda décimas de segundo.
 
 ## Cómo genera una app
 
@@ -26,16 +25,14 @@ curl -X POST "$REPORT_URL/api/generar" \
   -o resumen.pdf \
   -d '{
     "plantilla": "resumen",
-    "formato": "pdf",
     "nombre": "Resumen octubre",
     "datos": { "cliente": { "nombre": "Multiforte SL" }, "lineas": [ { "concepto": "Soporte", "horas": 2 } ], "total": 80 }
   }'
 ```
 
-Responde con el fichero (`Content-Disposition` con el nombre). `formato` es opcional (el primero
-de los que admite la plantilla, normalmente `pdf`). Errores, con `{ "error": "…" }`: `400` (datos
-o formato), `401` (llave), `404` (no existe la plantilla), `422` (la plantilla no se ha podido
-rellenar; queda en el registro), `429` (más de 60 por minuto).
+Responde con el PDF (`Content-Disposition` con el nombre). Errores, con `{ "error": "…" }`: `400`
+(datos), `401` (llave), `404` (no existe la plantilla), `422` (no se ha podido generar; queda en el
+registro), `429` (más de 60 por minuto).
 
 `GET /api/plantillas` (con la llave) devuelve `[{ nombre, titulo, formatos }]`.
 
@@ -43,20 +40,33 @@ En la pantalla, «Copiar la llamada» da el cuerpo exacto con los datos de ejemp
 
 ## Cómo se hace una plantilla
 
-Un documento normal, con el diseño que quieras, y marcas donde van los datos:
+En **Plantillas** → **Crear en blanco** (A4), y en el diseñador se arrastran los elementos a la
+página. Los datos entran así:
 
-| Marca | Qué hace |
+| Elemento | Cómo recibe los datos |
 |---|---|
-| `{d.cliente.nombre}` | Un dato de los que manda la app (`d`) |
-| `{d.lineas[i].concepto}` en una fila y `{d.lineas[i+1].concepto}` en la de debajo | Repite la fila por cada elemento de la lista |
-| `{d.total:formatC(2)}` | Moneda: 1.234,50 € |
-| `{d.horas:formatN(2)}` | Número: 6,75 |
-| `{d.fecha:formatD('DD/MM/YYYY')}` | Fecha (la app la manda como `2026-10-12`) |
-| `{d.notas:ifEmpty('Sin notas')}` | Texto si viene vacío |
+| Texto | Texto con marcas entre llaves: `Cliente: {cliente.nombre}` |
+| Tabla | Se llama como la lista de los datos (`lineas`). Su primera fila lleva la marca de cada columna (`{concepto}`, `{enEuros(importe)}`) y se repite por cada elemento; si no cabe, sigue en otra página |
+| Imagen, QR… | Fijo (un logo), o «Editable» y con el nombre del dato que lo trae |
 
-Todas en la [documentación de Carbone](https://carbone.io/documentation.html). Escribe cada marca
-de una vez para que Word no la parta por dentro. Al arrancar por primera vez, la app trae la
-plantilla `ejemplo` (`ejemplos/ejemplo.docx`, un resumen de servicios con la marca).
+Formato en español dentro de las marcas:
+
+| Marca | Sale |
+|---|---|
+| `{enEuros(total)}` | 1.234,50 € |
+| `{conDecimales(horas)}`, `{conDecimales(horas, 1)}` | 6,75 · 6,8 |
+| `{comoFecha(fecha)}`, `{comoFecha(fecha, 'larga')}`, `{comoFecha(creada, 'hora')}` | 12/10/2026 · 12 de octubre de 2026 · 12/10/2026, 18:30 |
+| `{siVacio(notas, 'Sin notas')}` | Otro texto si viene vacío |
+| `{hoy()}` | La fecha del día |
+| `{lineas.length}`, `{horas * 40}`, `{pagado ? 'Pagado' : 'Pendiente'}` | Cuentas y condiciones sencillas |
+
+Si una marca no se puede resolver (un dato que no viene), sale tal cual, entre llaves. Lo que manda
+la app nunca se interpreta como marca. Ojo con los nombres de los elementos de texto: si uno se llama
+como un dato (`cliente`), el diseñador lo confunde al dibujarlo; mejor `bloque-cliente`.
+
+**Descargar** da la plantilla con sus datos de ejemplo en un `.json`; **Importar .json** la sube en
+otro entorno (así se pasa de DEV a PRO). Al arrancar por primera vez, la app trae la plantilla
+`ejemplo` (`ejemplos/plantilla.json` y `ejemplos/datos.json`).
 
 ## Configuración
 
@@ -66,8 +76,8 @@ no el documento.
 
 Entra en la pantalla quien está en IT o en `<ENTORNO>/ReportServer/Admin`.
 
-LibreOffice usa unos 300 MB mientras está en marcha; los documentos esperan su turno de uno en uno.
-El primero tras arrancar tarda un par de segundos más.
+Las plantillas de la primera versión (Word, con Carbone) siguen en la lista pero ya no salen: hay que
+rehacerlas en el diseñador. La de ejemplo se cambia sola.
 
 ## Desplegar
 
@@ -77,10 +87,9 @@ versión (`sha-xxxxxxx`, la del último push a `main`), probar en `dev.<dominio>
 
 ## En local
 
-Hace falta LibreOffice para el PDF (sin él, solo sale en el formato de la plantilla).
-
 ```
 npm install
+npm run web    # empaqueta el diseñador en public/js
 npm test
-RS_DATOS=./datos PATH="$PATH:/usr/lib/libreoffice/program" node server.js   # http://localhost:3000, sin Keycloak
+RS_DATOS=./datos node server.js   # http://localhost:3000, sin Keycloak
 ```

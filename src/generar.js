@@ -1,32 +1,12 @@
-// Generar un documento: plantilla + datos -> PDF (o el formato que se pida).
-// Carbone rellena la plantilla y, para cambiar de formato, usa LibreOffice
-// (que tiene que estar en la imagen; ver Dockerfile). Cada documento queda
-// anotado en el registro, sin su contenido.
+// Generar un documento: plantilla + datos -> PDF, con pdfme (ver motor.js).
+// Cada documento queda anotado en el registro, sin su contenido.
 
-const os = require('os');
-const carbone = require('carbone');
 const { bd, ahora } = require('./bd');
 const plantillas = require('./plantillas');
+const motor = require('./motor');
 const { error } = require('./llaves');
 
-carbone.set({
-  // Las rutas de las plantillas van completas; aquí Carbone solo deja su carpeta «lang».
-  templatePath: os.tmpdir(),
-  tempPath: os.tmpdir(),
-  lang: 'es-es',
-  timezone: 'Europe/Madrid',
-  currencySource: 'EUR',
-  currencyTarget: 'EUR',
-  // Un solo LibreOffice: los documentos esperan su turno en vez de gastar memoria.
-  factories: 1,
-  startFactory: false
-});
-
-function render(ruta, datos, opciones) {
-  return new Promise((ok, mal) => carbone.render(ruta, datos, opciones, (e, r) => (e ? mal(e) : ok(r))));
-}
-
-// "Resumen de octubre.pdf" -> "Resumen de octubre.pdf"; quita lo que no va en un nombre de fichero.
+// "Resumen de octubre" -> "Resumen de octubre.pdf"; quita lo que no va en un nombre de fichero.
 function nombreFichero(nombre, porDefecto, formato) {
   const limpio = String(nombre || '').replace(/[\\/:*?"<>|\r\n]+/g, ' ').trim().slice(0, 120) || porDefecto;
   return limpio.toLowerCase().endsWith('.' + formato) ? limpio : limpio + '.' + formato;
@@ -37,23 +17,28 @@ function anotar(app, plantilla, formato, estado, motivo, bytes, ms) {
     .run(app, plantilla, formato, estado, motivo, bytes, ms, ahora());
 }
 
-// { plantilla, datos, formato?, nombre? } -> { contenido, tipo, fichero }
-async function generar(app, peticion) {
+// { plantilla, datos, formato?, nombre?, diseno? } -> { contenido, tipo, fichero }
+// «diseno» solo lo manda la pantalla, para ver lo que se está diseñando sin guardarlo.
+async function generar(app, peticion, conDiseno) {
   const p = plantillas.una(peticion.plantilla);
   if (!p) throw error('No existe la plantilla «' + String(peticion.plantilla || '').slice(0, 40) + '».', 404);
-  const formato = String(peticion.formato || p.formatos[0]).toLowerCase();
-  if (!p.formatos.includes(formato)) throw error('Esta plantilla sale en ' + p.formatos.join(', ') + '.');
+  if (!p.formatos.length) throw error('La plantilla «' + p.nombre + '» es de la versión anterior (Word): hay que rehacerla en el diseñador.', 422);
+  const formato = String(peticion.formato || 'pdf').toLowerCase();
+  if (!p.formatos.includes(formato)) throw error('Las plantillas salen en PDF.');
   const datos = peticion.datos === undefined ? {} : peticion.datos;
   if (!datos || typeof datos !== 'object') throw error('datos tiene que ser un objeto o una lista.');
+  const deLaPantalla = !!(conDiseno && peticion.diseno);
+  const diseno = deLaPantalla ? peticion.diseno : plantillas.diseno(p);
 
   const inicio = Date.now();
   try {
-    const contenido = await render(plantillas.fichero(p), datos, formato === p.extension ? {} : { convertTo: formato });
+    if (deLaPantalla) await motor.comprobar(diseno);
+    const contenido = await motor.pdf(diseno, datos);
     anotar(app, p.nombre, formato, 'generado', '', contenido.length, Date.now() - inicio);
-    return { contenido, tipo: plantillas.TIPOS[formato], fichero: nombreFichero(peticion.nombre, p.nombre, formato) };
+    return { contenido, tipo: plantillas.TIPOS.pdf, fichero: nombreFichero(peticion.nombre, p.nombre, formato) };
   } catch (e) {
-    const motivo = String(e.message || e).slice(0, 300);
-    console.error('No se ha podido generar ' + p.nombre + ' (' + formato + '): ' + motivo);
+    const motivo = String(e.message || e).split('\n')[0].slice(0, 300);
+    console.error('No se ha podido generar ' + p.nombre + ': ' + motivo);
     anotar(app, p.nombre, formato, 'fallido', motivo, 0, Date.now() - inicio);
     throw error('No se ha podido generar el documento: ' + motivo, 422);
   }
