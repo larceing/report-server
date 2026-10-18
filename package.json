@@ -6,7 +6,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node --disable-warning=ExperimentalWarning server.js",
-    "test": "node --disable-warning=ExperimentalWarning tests/api.js && node --disable-warning=ExperimentalWarning tests/acceso.js",
+    "test": "node --disable-warning=ExperimentalWarning tests/api.js && node --disable-warning=ExperimentalWarning tests/acceso.js && node --disable-warning=ExperimentalWarning tests/bd.js",
     "web": "esbuild web/disenador.js --bundle --minify --format=esm --target=es2020 --outfile=public/js/disenador.js --external:node:* --loader:.woff2=dataurl --loader:.ttf=dataurl --log-level=warning && cp node_modules/clawpdf/dist/vendor/pdfium.esm.wasm public/js/"
   },
   "engines": {
@@ -16,7 +16,8 @@
     "@pdfme/common": "6.2.6",
     "@pdfme/generator": "6.2.6",
     "@pdfme/schemas": "6.2.6",
-    "express": "^4.21.2"
+    "express": "^4.21.2",
+    "mysql2": "3.24.6"
   },
   "devDependencies": {
     "@pdfme/ui": "6.2.6",

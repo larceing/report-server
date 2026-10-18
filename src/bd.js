@@ -50,6 +50,27 @@ bd.exec(`
   );
 `);
 
+// Conexiones a bases de datos de las que leen los informes. La contraseña va cifrada (conexiones.js).
+bd.exec(`
+  CREATE TABLE IF NOT EXISTS conexion (
+    nombre TEXT PRIMARY KEY,
+    tipo TEXT NOT NULL DEFAULT 'mariadb',
+    host TEXT NOT NULL,
+    puerto INTEGER NOT NULL DEFAULT 3306,
+    usuario TEXT NOT NULL,
+    clave TEXT NOT NULL DEFAULT '',
+    base TEXT NOT NULL,
+    creada TEXT NOT NULL,
+    actualizada TEXT NOT NULL
+  );
+`);
+
+// Columnas que llegaron después: el grupo del informe (pedido, factura…) y de
+// dónde saca los datos (conexión, parámetros y consultas).
+const columnas = bd.prepare('PRAGMA table_info(plantilla)').all().map(c => c.name);
+if (!columnas.includes('grupo')) bd.exec("ALTER TABLE plantilla ADD COLUMN grupo TEXT NOT NULL DEFAULT ''");
+if (!columnas.includes('origen')) bd.exec("ALTER TABLE plantilla ADD COLUMN origen TEXT NOT NULL DEFAULT '{}'");
+
 const ahora = () => new Date().toISOString();
 
 module.exports = { bd, ahora, DATOS, PLANTILLAS };

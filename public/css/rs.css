@@ -86,3 +86,15 @@ main.ancho { max-width: none; }
 #editor.completa .lienzo { flex: 1; height: auto; min-height: 0; }
 #editor.completa .dos { display: none; }
 body.sin-scroll { overflow: hidden; }
+label.corta { flex: 1; min-width: 220px; margin: 0; }
+input.estrecho { max-width: 120px; min-width: 90px !important; }
+.consulta { display: grid; grid-template-columns: minmax(140px, 200px) auto minmax(0, 1fr) auto; gap: 8px; align-items: start; margin: 0 0 8px; }
+.consulta textarea { font-family: ui-monospace, Consolas, monospace; font-size: 13px; min-height: 70px; margin: 0; }
+.consulta input { margin: 0; }
+.consulta .una { white-space: nowrap; font-weight: 400; margin: 9px 0 0; display: flex; gap: 4px; align-items: center; }
+.consulta .una input { width: auto; }
+.parametro { display: flex; gap: 8px; margin: 0 0 8px; }
+.parametro input { margin: 0; max-width: 260px; }
+#eResultado { max-height: 320px; }
+.grupo-titulo { grid-column: 1 / -1; margin: 6px 0 -4px; font-size: 12px; text-transform: uppercase; letter-spacing: .5px; color: var(--suave); }
+#editor.completa #eDatos { display: none; }

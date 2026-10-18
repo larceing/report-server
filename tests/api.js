@@ -77,7 +77,7 @@ process.env.RS_DATOS = fs.mkdtempSync(path.join(os.tmpdir(), 'rs-'));
   assert.strictEqual((await pedir('POST', '/api/generar', { plantilla: 'resumen' }, { Authorization: 'Bearer rs_' + 'x'.repeat(32) })).status, 401, 'llave inventada');
 
   r = await pedir('GET', '/api/plantillas', null, conLlave);
-  assert.deepStrictEqual(r.json, [{ nombre: 'resumen', titulo: 'Resumen de servicios', formatos: ['pdf'] }]);
+  assert.deepStrictEqual(r.json, [{ nombre: 'resumen', titulo: 'Resumen de servicios', grupo: '', formatos: ['pdf'], parametros: [] }]);
 
   assert.strictEqual((await pedir('POST', '/api/generar', { plantilla: 'no-existe' }, conLlave)).status, 404);
   assert.strictEqual((await pedir('POST', '/api/generar', { plantilla: 'resumen', formato: 'docx' }, conLlave)).status, 400);
