@@ -51,6 +51,14 @@ base de datos no responde, `502`.
 `GET /api/plantillas?grupo=pedido`, solo las de ese grupo (para ofrecer «Pedido de venta», «Pedido de
 compra»… y generar la elegida).
 
+Una app puede **instalar sus plantillas de partida** con su llave, para que nadie tenga que importar
+ficheros a mano: `POST /api/plantillas` con `{ nombre, titulo, grupo, plantilla, ejemplo }`. Solo
+plantillas cuyo nombre empieza por el de la app de la llave (la llave de `sindri` instala
+`sindri-factura`, no `factura`); `403` si no. Si ya existe, no la toca y responde
+`{ "nombre": "…", "estado": "ya estaba" }`, así lo retocado en el diseñador se queda; con
+`"sustituir": true` la vuelve a dejar como la de partida (`"sustituida"`). Si no existía,
+`"instalada"`. Las consultas a bases de datos no se instalan así: solo desde la pantalla.
+
 En la pantalla, «Copiar la llamada» da el cuerpo exacto con los datos de ejemplo de la plantilla.
 
 ## Cómo se hace una plantilla
