@@ -1,0 +1,13 @@
+{
+  "nombre": "Report Server",
+  "ruta": "report-server",
+  "grupo": "ReportServer",
+  "puerto": 3000,
+  "prefijo": "quitar",
+  "version": "version/",
+  "despliegue": {
+    "tipo": "servidor",
+    "imagen": "ghcr.io/larceing/report-server",
+    "memoria_mb": 512
+  }
+}

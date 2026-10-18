@@ -1,0 +1,18 @@
+{
+  "name": "report-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Documentos a partir de plantillas (Word, LibreOffice, Excel) para las apps del servidor DEV/PRO: llaves por app, PDF y registro.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning server.js",
+    "test": "node --disable-warning=ExperimentalWarning tests/api.js && node --disable-warning=ExperimentalWarning tests/acceso.js"
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "dependencies": {
+    "carbone": "3.8.2",
+    "express": "^4.21.2"
+  }
+}
