@@ -566,6 +566,10 @@ $('salir').addEventListener('click', async () => {
     $('yo').textContent = yo.usuario;
     $('ejemploLlamada').textContent = llamada('ejemplo', { cliente: { nombre: 'Multiforte SL' }, total: 270 });
     const lista = await cargarPlantillas();
-    if (lista.length === 1) await abrir(lista[0]);
+    // Enlace directo a una plantilla (#editar=<nombre>), p. ej. desde la app que la usa.
+    const pedida = new URLSearchParams(location.hash.slice(1)).get('editar');
+    const una = pedida ? lista.find(p => p.nombre === pedida) : null;
+    if (pedida && !una) aviso('No existe la plantilla «' + pedida + '».');
+    if (una || lista.length === 1) await abrir(una || lista[0]);
   } catch (e) { aviso(e.message); }
 })();
