@@ -26,7 +26,7 @@ app.use((req, res, next) => {
   };
   res.set({
     'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'same-origin',
-    'X-Frame-Options': 'DENY', 'Content-Security-Policy': "frame-ancestors 'none'"
+    'X-Frame-Options': 'SAMEORIGIN', 'Content-Security-Policy': "frame-ancestors 'self'"
   });
   next();
 });
