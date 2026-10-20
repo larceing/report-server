@@ -181,6 +181,15 @@ process.env.RS_DATOS = fs.mkdtempSync(path.join(os.tmpdir(), 'rs-'));
   r = await pedir('POST', '/api/admin/probar', { plantilla: 'ejemplo', datos: ejemplo });
   assert.strictEqual(r.status, 200);
 
+  // Lo que manda la app sale tal cual, aunque lleve llaves.
+  const marcas = { basePdf: { width: 210, height: 297, padding: [0, 0, 0, 0] }, schemas: [[
+    { name: 'fijo', type: 'text', content: 'Cliente: {cliente}', readOnly: true, position: { x: 0, y: 0 }, width: 50, height: 10 },
+    { name: 'lineas', type: 'table', content: JSON.stringify([['{concepto}']]), position: { x: 0, y: 20 }, width: 50, height: 10 }
+  ]] };
+  const literal = motor.preparar(marcas, { cliente: '{1+1} y {hoy()}', lineas: [{ concepto: '{1+1}' }] });
+  assert.strictEqual(literal.valores.fijo, 'Cliente: {1+1} y {hoy()}', 'los datos no se evalúan como marcas');
+  assert.deepStrictEqual(JSON.parse(literal.valores.lineas), [['{1+1}']], 'tampoco en las tablas');
+
   // Solo JSON en la API.
   r = await fetch(url + '/api/generar', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: 'x' });
   assert.strictEqual(r.status, 415);
