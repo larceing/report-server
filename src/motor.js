@@ -34,8 +34,23 @@ async function cargar() {
 
 const texto = (v) => v === undefined || v === null ? '' : typeof v === 'string' ? v : typeof v === 'object' ? JSON.stringify(v) : String(v);
 
+// pdfme vuelve a evaluar las variables que llevan llaves: un dato «{1+1}» saldría como «2».
+// Las llaves de los datos se cambian por dos caracteres de uso privado antes de resolver y se
+// devuelven al final, así lo que manda la app sale tal cual.
+const ABRE = '\uE000';
+const CIERRA = '\uE001';
+function proteger(v) {
+  if (typeof v === 'string') return v.replace(/\{/g, ABRE).replace(/\}/g, CIERRA);
+  if (Array.isArray(v)) return v.map(proteger);
+  if (v && typeof v === 'object' && Object.getPrototypeOf(v) === Object.prototype) {
+    return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, proteger(x)]));
+  }
+  return v;
+}
+const restaurar = (s) => s.replace(/\uE000/g, '{').replace(/\uE001/g, '}');
+
 function resolver(contenido, variables) {
-  return pdfme.replacePlaceholders({ content: String(contenido || ''), variables, schemas: [] });
+  return restaurar(pdfme.replacePlaceholders({ content: String(contenido || ''), variables, schemas: [] }));
 }
 
 function filaModelo(campo) {
@@ -51,7 +66,7 @@ function filaModelo(campo) {
 function preparar(plantilla, datos) {
   const t = structuredClone(plantilla);
   const base = Array.isArray(datos) ? { lista: datos } : datos;
-  const variables = { ...base, ...AYUDAS };
+  const variables = { ...proteger(base), ...AYUDAS };
   const valores = {};
 
   for (const campo of t.schemas.flat()) {
@@ -60,7 +75,7 @@ function preparar(plantilla, datos) {
       const modelo = filaModelo(campo);
       if (Array.isArray(dato)) {
         valores[campo.name] = JSON.stringify(dato.map(fila => Array.isArray(fila) ? fila.map(texto)
-          : (modelo || []).map(celda => resolver(celda, { ...variables, ...(fila && typeof fila === 'object' ? fila : { valor: fila }) }))));
+          : (modelo || []).map(celda => resolver(celda, { ...variables, ...proteger(fila && typeof fila === 'object' ? fila : { valor: fila }) }))));
       } else {
         // Sin lista en los datos, la tabla sale vacía (no con la fila de marcas).
         valores[campo.name] = '[]';
