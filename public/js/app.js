@@ -564,6 +564,7 @@ $('salir').addEventListener('click', async () => {
     const yo = await api('GET', '/yo');
     base = yo.base;
     $('yo').textContent = yo.usuario;
+    if (location.hostname.startsWith('dev.')) $('chipDev').hidden = false;
     $('ejemploLlamada').textContent = llamada('ejemplo', { cliente: { nombre: 'Multiforte SL' }, total: 270 });
     const lista = await cargarPlantillas();
     // Enlace directo a una plantilla (#editar=<nombre>), p. ej. desde la app que la usa.
