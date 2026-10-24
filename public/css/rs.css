@@ -98,3 +98,45 @@ input.estrecho { max-width: 120px; min-width: 90px !important; }
 #eResultado { max-height: 320px; }
 .grupo-titulo { grid-column: 1 / -1; margin: 6px 0 -4px; font-size: 12px; text-transform: uppercase; letter-spacing: .5px; color: var(--suave); }
 #editor.completa #eDatos { display: none; }
+
+/* Plantilla común de las apps (cabecera clara, pestañas en píldora, tarjetas blancas
+   redondeadas y botón «Todas las apps»). Color de Report Server: #2F6FB0. */
+:root { --bg: #f3f6fa; --capa: #e6ebf2; --tinta: #191c20; --suave: #43474e; --linea: #e3e8ee;
+  --app: #2f6fb0; --app-tonal: #d6e3ff; --app-sobre: #001b3e; }
+body { font-family: 'Roboto Flex', Roboto, system-ui, -apple-system, 'Segoe UI', sans-serif; -webkit-font-smoothing: antialiased; }
+.barra { background: var(--bg); color: var(--tinta); padding: 12px 24px; gap: 12px; }
+.barra .suave { color: var(--suave); }
+.barra .enlace { color: var(--primario); min-height: 40px; padding: 0 12px; border-radius: 20px; font-weight: 500; }
+.barra .enlace:hover { background: var(--capa); }
+.apps-btn { width: 44px; height: 44px; border-radius: 12px; background: var(--capa); color: #43474e; display: inline-flex; align-items: center; justify-content: center; }
+.apps-btn:hover { background: var(--app-tonal); color: var(--app-sobre); }
+.marca { font-size: 18px; }
+.app-ico { width: 36px; height: 36px; border-radius: 10px; background: var(--app); color: #fff; display: grid; place-items: center; font-weight: 700; }
+.chip-dev { font-size: 12px; font-weight: 700; letter-spacing: .04em; padding: 6px 10px; border-radius: 8px; background: #ffe0b2; color: #5a3300; }
+nav button { color: #43474e; min-height: 40px; padding: 0 16px; border-radius: 20px; font-weight: 500; }
+nav button:hover { background: var(--capa); }
+nav button.activa { background: var(--app-tonal); color: var(--app-sobre); }
+main { padding-top: 8px; }
+.panel { border: 0; border-radius: 24px; padding: 20px; }
+.tabla { border: 0; border-radius: 20px; }
+.tabla th { text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 600; }
+.tabla tbody tr:hover { background: #f3f6fa; }
+input, select, textarea { border-color: #c3c7cf; border-radius: 12px; padding: 10px 14px; }
+button { border-radius: 20px; padding: 8px 16px; border-color: #c3c7cf; font-weight: 500; }
+button.primario { background: var(--app); border-color: var(--app); }
+button.enlace { color: var(--app); }
+iframe { border: 0; border-radius: 16px; background: #f3f6fa; }
+.bloque { border: 0; border-radius: 16px; background: #f3f6fa; }
+.galeria img { border-radius: 12px; }
+.aviso { border: 0; border-radius: 28px; padding: 32px; }
+.aviso .boton { border-radius: 16px; background: var(--app); }
+.boton-fichero { border-radius: 20px; border-color: #c3c7cf; padding: 8px 16px; font-weight: 500; }
+.tarjeta { border: 0; border-radius: 20px; padding: 16px 18px; }
+.tarjeta:hover { background: #fafbfd; }
+.tarjeta.activa { background: var(--app-tonal); color: var(--app-sobre); box-shadow: none; }
+@media (max-width: 700px) {
+  .barra { padding: 10px 12px; }
+  nav { order: 9; flex-basis: 100%; overflow-x: auto; flex-wrap: nowrap; }
+  nav button { white-space: nowrap; }
+  .apps-btn { width: 40px; height: 40px; }
+}
