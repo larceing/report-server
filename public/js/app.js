@@ -66,6 +66,7 @@ document.querySelectorAll('#pestanas button').forEach(b => b.addEventListener('c
 // ── plantillas ────────────────────────────────────────────────────────────
 
 let disenador = null;
+let altosGuardados = {}; // alto de cada tabla tal y como está guardada
 let cambios = false;
 
 function marcarCambios(si) {
@@ -153,6 +154,7 @@ async function abrir(p) {
     const [rs, diseno] = await Promise.all([cargarDisenador(), api('GET', '/plantillas/' + encodeURIComponent(p.nombre) + '/diseno')]);
     if (actual !== p) return;
     disenador = rs.crear($('lienzo'), diseno);
+    altosGuardados = altosDeTablas(diseno);
     // Al abrirlo, el diseñador completa la plantilla y avisa de un cambio que no lo es.
     let inicial = null;
     setTimeout(() => { if (disenador) inicial = JSON.stringify(disenador.getTemplate()); }, 300);
@@ -349,14 +351,35 @@ $('nFichero').addEventListener('change', async () => {
 
 const plantillasConNombre = (nombre) => [...document.querySelectorAll('.tarjeta')].some(t => t.dataset.nombre === nombre);
 
+// El diseñador estira cada tabla hasta que caben sus filas de ejemplo y no baja lo de debajo.
+// Si la tabla sigue en su sitio, se guarda y se prueba con el alto que tenía: al generar, pdfme
+// la estira con las filas de verdad y baja lo que hay debajo.
+function altosDeTablas(t) {
+  const altos = {};
+  for (const c of (t && t.schemas ? t.schemas.flat() : [])) {
+    if (c.type === 'table' && c.position) altos[c.name] = { x: c.position.x, y: c.position.y, w: c.width, h: c.height };
+  }
+  return altos;
+}
+function plantillaDisenada() {
+  const t = disenador.getTemplate();
+  for (const c of t.schemas.flat()) {
+    const g = altosGuardados[c.name];
+    if (c.type === 'table' && g && c.position && c.position.x === g.x && c.position.y === g.y && c.width === g.w && c.height > g.h) c.height = g.h;
+  }
+  return t;
+}
+
 async function guardar() {
   if (!actual || !disenador) return;
   try {
+    const plantilla = plantillaDisenada();
     const p = await api('PUT', '/plantillas/' + encodeURIComponent(actual.nombre), {
-      titulo: $('eTitulo').value, ejemplo: ejemploEscrito(), plantilla: disenador.getTemplate(),
+      titulo: $('eTitulo').value, ejemplo: ejemploEscrito(), plantilla,
       grupo: $('eGrupo').value, origen: origenEscrito()
     });
     actual = p;
+    altosGuardados = altosDeTablas(plantilla);
     marcarCambios(false);
     aviso('Guardada.', true);
     await cargarPlantillas();
@@ -404,7 +427,7 @@ $('eVer').addEventListener('click', async () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        plantilla: actual.nombre, datos: ejemploEscrito(), diseno: disenador ? disenador.getTemplate() : undefined,
+        plantilla: actual.nombre, datos: ejemploEscrito(), diseno: disenador ? plantillaDisenada() : undefined,
         origen: origenEscrito(), parametros: parametrosPrueba(origenEscrito())
       })
     });

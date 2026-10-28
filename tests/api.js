@@ -123,6 +123,15 @@ process.env.RS_DATOS = fs.mkdtempSync(path.join(os.tmpdir(), 'rs-'));
   const editable = { basePdf: diseno.basePdf, schemas: [[{ ...diseno.schemas[0][3], name: 'campo1', readOnly: false, content: 'Hola {cliente.nombre}' }]] };
   assert.strictEqual(motor.preparar(editable, ejemplo).valores.campo1, 'Hola Multiforte SL', 'editable sin dato: lo escrito');
   assert.strictEqual(motor.preparar(editable, { ...ejemplo, campo1: 'Otro {x}' }).valores.campo1, 'Otro {x}', 'editable con dato: el dato');
+  // Una tabla que el diseñador estiró por encima de lo de debajo se recorta; lo de al lado no cuenta.
+  const tabla = { name: 't', type: 'table', position: { x: 15, y: 76 }, width: 180, height: 36, content: '[]' };
+  const debajo = { name: 'd', type: 'text', position: { x: 85, y: 102 }, width: 110, height: 10, content: 'x', readOnly: true };
+  const alLado = { name: 'l', type: 'text', position: { x: 196, y: 80 }, width: 10, height: 5, content: 'y', readOnly: true };
+  const estirada = { basePdf: diseno.basePdf, schemas: [[tabla, debajo, alLado]] };
+  assert.strictEqual(motor.preparar(estirada, {}).plantilla.schemas[0][0].height, 26, 'tabla recortada hasta lo de debajo');
+  assert.strictEqual(estirada.schemas[0][0].height, 36, 'la plantilla de entrada no se toca');
+  const suelta = { basePdf: diseno.basePdf, schemas: [[{ ...tabla, height: 20 }, debajo]] };
+  assert.strictEqual(motor.preparar(suelta, {}).plantilla.schemas[0][0].height, 20, 'sin solaparse, igual');
   const { AYUDAS } = require('../src/ayudas');
   assert.strictEqual(AYUDAS.enEuros(1234.5), '1.234,50\u00a0€');
   assert.strictEqual(AYUDAS.conDecimales(6.75, 1), '6,8');

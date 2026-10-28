@@ -62,9 +62,32 @@ function filaModelo(campo) {
   }
 }
 
+// El diseñador agranda cada tabla hasta que caben sus filas de ejemplo, pero no baja lo que
+// tiene debajo, y pdfme solo empuja hacia abajo lo que empieza donde acaba la tabla. Una tabla
+// que tapa algo que empieza más abajo que ella (y en las mismas columnas) se recorta hasta
+// ese punto: al generar, pdfme la vuelve a estirar con las filas reales y baja lo de debajo.
+function ajustarTablas(t) {
+  for (const pagina of t.schemas) {
+    const campos = Array.isArray(pagina) ? pagina : Object.values(pagina);
+    for (const tabla of campos) {
+      if (tabla.type !== 'table' || !tabla.position) continue;
+      const { x, y } = tabla.position;
+      let fin = y + tabla.height;
+      for (const otro of campos) {
+        if (otro === tabla || !otro.position) continue;
+        const ox = otro.position.x, oy = otro.position.y;
+        const columnas = ox < x + tabla.width && ox + (otro.width || 0) > x;
+        if (columnas && oy > y && oy < fin) fin = oy;
+      }
+      if (fin < y + tabla.height) tabla.height = Math.max(1, fin - y);
+    }
+  }
+}
+
 // La plantilla con las marcas ya resueltas y los valores de cada campo.
 function preparar(plantilla, datos) {
   const t = structuredClone(plantilla);
+  ajustarTablas(t);
   const base = Array.isArray(datos) ? { lista: datos } : datos;
   const variables = { ...proteger(base), ...AYUDAS };
   const valores = {};
