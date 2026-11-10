@@ -23,15 +23,15 @@
         "rotate": 0,
         "opacity": 1,
         "borderWidth": 0,
-        "borderColor": "#0e1b33",
-        "color": "#0e1b33",
+        "borderColor": "#0f1b2d",
+        "color": "#0f1b2d",
         "readOnly": true,
         "radius": 2
       },
       {
         "name": "marca",
         "type": "text",
-        "content": "HENRY ARCE",
+        "content": "ARCE DATA LAB",
         "position": {
           "x": 22,
           "y": 17
@@ -70,7 +70,7 @@
       {
         "name": "lema",
         "type": "text",
-        "content": "BUSINESS APPLICATIONS & DATA",
+        "content": "DATOS, AUTOMATIZACIÓN Y WEB",
         "position": {
           "x": 22,
           "y": 26
@@ -86,7 +86,7 @@
         "fontVariantFallback": "synthetic",
         "lineHeight": 1.2,
         "characterSpacing": 0.6,
-        "fontColor": "#35d6c0",
+        "fontColor": "#9db6ff",
         "backgroundColor": "",
         "borderColor": "#000000",
         "borderWidth": {
@@ -125,7 +125,7 @@
         "fontVariantFallback": "synthetic",
         "lineHeight": 1.2,
         "characterSpacing": 0,
-        "fontColor": "#15202b",
+        "fontColor": "#1e2329",
         "backgroundColor": "",
         "borderColor": "#000000",
         "borderWidth": {
@@ -164,7 +164,7 @@
         "fontVariantFallback": "synthetic",
         "lineHeight": 1.2,
         "characterSpacing": 0,
-        "fontColor": "#15202b",
+        "fontColor": "#1e2329",
         "backgroundColor": "",
         "borderColor": "#000000",
         "borderWidth": {
@@ -203,7 +203,7 @@
         "fontVariantFallback": "synthetic",
         "lineHeight": 1.2,
         "characterSpacing": 0,
-        "fontColor": "#15202b",
+        "fontColor": "#1e2329",
         "backgroundColor": "",
         "borderColor": "#000000",
         "borderWidth": {
@@ -242,7 +242,7 @@
         "fontVariantFallback": "synthetic",
         "lineHeight": 1.2,
         "characterSpacing": 0,
-        "fontColor": "#15202b",
+        "fontColor": "#1e2329",
         "backgroundColor": "",
         "borderColor": "#000000",
         "borderWidth": {
@@ -287,7 +287,7 @@
           18
         ],
         "tableStyles": {
-          "borderColor": "#dde3ea",
+          "borderColor": "#e3e6ea",
           "borderWidth": 0.2
         },
         "headStyles": {
@@ -297,8 +297,8 @@
           "lineHeight": 1,
           "characterSpacing": 0,
           "fontColor": "#ffffff",
-          "backgroundColor": "#0e1b33",
-          "borderColor": "#0e1b33",
+          "backgroundColor": "#0f1b2d",
+          "borderColor": "#0f1b2d",
           "borderWidth": {
             "top": 0,
             "right": 0,
@@ -318,9 +318,9 @@
           "fontSize": 9.5,
           "lineHeight": 1,
           "characterSpacing": 0,
-          "fontColor": "#15202b",
+          "fontColor": "#1e2329",
           "backgroundColor": "",
-          "borderColor": "#dde3ea",
+          "borderColor": "#e3e6ea",
           "borderWidth": {
             "top": 0.1,
             "right": 0.1,
@@ -362,7 +362,7 @@
         "fontVariantFallback": "synthetic",
         "lineHeight": 1.2,
         "characterSpacing": 0,
-        "fontColor": "#15202b",
+        "fontColor": "#1e2329",
         "backgroundColor": "",
         "borderColor": "#000000",
         "borderWidth": {
@@ -401,7 +401,7 @@
         "fontVariantFallback": "synthetic",
         "lineHeight": 1.2,
         "characterSpacing": 0,
-        "fontColor": "#5b6877",
+        "fontColor": "#4b5563",
         "backgroundColor": "",
         "borderColor": "#000000",
         "borderWidth": {
@@ -433,12 +433,12 @@
         "rotate": 0,
         "opacity": 1,
         "readOnly": true,
-        "color": "#dde3ea"
+        "color": "#e3e6ea"
       },
       {
         "name": "pie",
         "type": "text",
-        "content": "Henry Arce · Business Applications & Data",
+        "content": "Henry Arce · Arce Data Lab · Avenida de Catral, 12, 03349 San Isidro (Alicante) · arcedatalab.com · henry@arcedatalab.com",
         "position": {
           "x": 15,
           "y": 279
@@ -454,7 +454,7 @@
         "fontVariantFallback": "synthetic",
         "lineHeight": 1.2,
         "characterSpacing": 0,
-        "fontColor": "#5b6877",
+        "fontColor": "#4b5563",
         "backgroundColor": "",
         "borderColor": "#000000",
         "borderWidth": {
